@@ -23,20 +23,20 @@ help:
 #################
 ###  DELIVERY  ##
 #################
-#.PHONY: delivery
-#delivery: archives python
+.PHONY: delivery
+delivery: archives python
 #
-#.PHONY: archives
-#archives: \
+.PHONY: archives
+archives: build
 #	centos-7-archive \
 #	debian-9-archive \
 #	ubuntu-14.04-archive \
 #	ubuntu-16.04-archive \
 #	ubuntu-17.10-archive
-#
-#.PHONY: python
-#python: manylinux1-pypi
-#
+
+.PHONY: python
+python: manylinux1-pypi
+
 #################
 ###  ARCHIVES  ##
 #################
@@ -182,6 +182,10 @@ help:
 ############
 ##  TEST  ##
 ############
+# keep all intermediate files
+# src: https://www.gnu.org/software/make/manual/html_node/Special-Targets.html
+.SECONDARY:
+
 .PHONY: test_delivery
 test_delivery: test_archives test_python
 
@@ -193,103 +197,163 @@ include ../../Version.txt
 OR_TOOLS_PATCH := $(shell git rev-list --count HEAD)
 OR_TOOLS_VERSION := $(OR_TOOLS_MAJOR).$(OR_TOOLS_MINOR).$(OR_TOOLS_PATCH)
 $(info version: $(OR_TOOLS_VERSION))
+OR_TOOLS_BRANCH := $(shell git rev-parse --abbrev-ref HEAD)
+$(info branch: $(OR_TOOLS_BRANCH))
 IMAGE := or-tools
+DOCKER_RUN_CMD := docker run --rm -it
+#DOCKER_BUILD_CMD := docker build --no-cache
+DOCKER_BUILD_CMD := docker build
 
 # Docker
-.PHONY: docker docker_centos-7 docker_debian-9 docker_ubuntu-14.04 docker_ubuntu-16.04 docker_ubuntu-17.10
+.PHONY: docker \
+docker_centos-7 \
+docker_debian-9 \
+docker_ubuntu-14.04 \
+docker_ubuntu-16.04 \
+docker_ubuntu-17.10
 docker: docker_centos-7 docker_debian-9 docker_ubuntu-14.04 docker_ubuntu-16.04 docker_ubuntu-17.10
-docker_centos-7: export/centos-7/docker_devel.tar
-docker_debian-9: export/debian-9/docker_devel.tar
-docker_ubuntu-14.04: export/ubuntu-14.04/docker_devel.tar
-docker_ubuntu-16.04: export/ubuntu-16.04/docker_devel.tar
-docker_ubuntu-17.10: export/ubuntu-17.10/docker_devel.tar
-export/%/docker_devel.tar: %.Dockerfile | export/%
-	@docker image rm -f ${IMAGE}_$*:devel 2>/dev/null
-	docker build --no-cache -t ${IMAGE}_$*:devel -f $< .
-	docker save ${IMAGE}_$*:devel -o $@
+docker_centos-7: export/docker_centos-7.tar
+docker_debian-9: export/docker_debian-9.tar
+docker_ubuntu-14.04: export/docker_ubuntu-14.04.tar
+docker_ubuntu-16.04: export/docker_ubuntu-16.04.tar
+docker_ubuntu-17.10: export/docker_ubuntu-17.10.tar
+export/docker_%.tar: %.Dockerfile | export
+	-docker image rm -f $(IMAGE)_$*:devel 2>/dev/null
+	$(DOCKER_BUILD_CMD) -t $(IMAGE)_$*:devel -f $< .
+	docker save $(IMAGE)_$*:devel -o $@
 
 # Docker Bash
-DOCKER_DEVEL_CMD := docker run --rm -it
-
 .PHONY: bash_centos-7 bash_debian-9 bash_ubuntu-14.04 bash_ubuntu-16.04 bash_ubuntu-17.10
-bash_centos-7: export/centos-7/docker_devel.tar
-	${DOCKER_DEVEL_CMD} ${IMAGE}_centos-7:devel /bin/bash
-bash_debian-9: export/debian-9/docker_devel.tar
-	${DOCKER_DEVEL_CMD} ${IMAGE}_debian-9:devel /bin/bash
-bash_ubuntu-14.04: export/ubuntu-14.04/docker_devel.tar
-	${docker_devel_cmd} ${image}_ubuntu-14.04:devel /bin/bash
-bash_ubuntu-16.04: export/ubuntu-16.04/docker_devel.tar
-	${docker_devel_cmd} ${image}_ubuntu-16.04:devel /bin/bash
-bash_ubuntu-17.10: export/ubuntu-17.10/docker_devel.tar
-	${docker_devel_cmd} ${image}_ubuntu-17.10:devel /bin/bash
+bash_centos-7: export/docker_centos-7.tar
+	$(DOCKER_RUN_CMD) $(IMAGE)_centos-7:devel /bin/bash
+bash_debian-9: export/docker_debian-9.tar
+	$(DOCKER_RUN_CMD) $(IMAGE)_debian-9:devel /bin/bash
+bash_ubuntu-14.04: export/docker_ubuntu-14.04.tar
+	$(DOCKER_RUN_CMD) $(IMAGE)_ubuntu-14.04:devel /bin/bash
+bash_ubuntu-16.04: export/docker_ubuntu-16.04.tar
+	$(DOCKER_RUN_CMD) $(IMAGE)_ubuntu-16.04:devel /bin/bash
+bash_ubuntu-17.10: export/docker_ubuntu-17.10.tar
+	$(DOCKER_RUN_CMD) $(IMAGE)_ubuntu-17.10:devel /bin/bash
 
 # Build Archive
-.PHONY: build build_centos-7 build-debian-9 build-ubuntu-14.04 build-ubuntu-16.04 build-ubuntu-17.10
-build: build_centos-7 build-debian-9 build-ubuntu-14.04 build-ubuntu-16.04 build-ubuntu-17.10
-build_centos-7: export/centos-7/build.log
-build_debian-9: export/debian-9/build.log
-build_ubuntu-14.04: export/ubuntu-14.04/build.log
-build_ubuntu-16.04: export/ubuntu-16.04/build.log
-build_ubuntu-17.10: export/ubuntu-17.10/build.log
-export/%/build.log: export/%/docker_devel.tar
+.PHONY: build \
+build_centos-7 \
+build_debian-9 \
+build_ubuntu-14.04 \
+build_ubuntu-16.04 \
+build_ubuntu-17.10
+build: build_centos-7 build_debian-9 build_ubuntu-14.04 build_ubuntu-16.04 build_ubuntu-17.10
+build_centos-7: export/$(IMAGE)_centos-7_v$(OR_TOOLS_VERSION).tar.gz
+build_debian-9: export/$(IMAGE)_debian-9_v$(OR_TOOLS_VERSION).tar.gz
+build_ubuntu-14.04: export/$(IMAGE)_ubuntu-14.04_v$(OR_TOOLS_VERSION).tar.gz
+build_ubuntu-16.04: export/$(IMAGE)_ubuntu-16.04_v$(OR_TOOLS_VERSION).tar.gz
+build_ubuntu-17.10: export/$(IMAGE)_ubuntu-17.10_v$(OR_TOOLS_VERSION).tar.gz
+export/$(IMAGE)_%_v$(OR_TOOLS_VERSION).tar.gz: export/docker_%.tar | export/%
 	@docker load -i $<
-	${DOCKER_DEVEL_CMD} -w /root/or-tools -v `pwd`/export:/export ${IMAGE}_$*:devel /bin/sh -c \
+	$(DOCKER_RUN_CMD) -w /root/or-tools -v `pwd`/export:/export $(IMAGE)_$*:devel /bin/sh -c \
 		"git pull; \
      make clean; \
      make all -j 5; \
      make test; \
      make archive fz_archive; \
-     mv ${IMAGE}_flatzink_*.tar.gz /export/${IMAGE}_flatzink_$*_v${OR_TOOLS_VERSION}.tar.gz; \
-     mv ${IMAGE}_*.tar.gz /export/${IMAGE}_$*_v${OR_TOOLS_VERSION}.tar.gz"
-	@date > $@
+     cp *.tar.gz /export/$*"
+	mv export/$*/$(IMAGE)_flatzinc_*.tar.gz export/$(IMAGE)_flatzinc_$*_v$(OR_TOOLS_VERSION).tar.gz
+	mv export/$*/$(IMAGE)_*.tar.gz export/$(IMAGE)_$*_v$(OR_TOOLS_VERSION).tar.gz
 
 # Test Archive
-.PHONY: test test_centos-7 test-debian-9 test-ubuntu-14.04 test-ubuntu-16.04 test-ubuntu-17.10
-test: test_centos-7 test-debian-9 test-ubuntu-14.04 test-ubuntu-16.04 test-ubuntu-17.10
+.PHONY: test \
+test_centos-7 \
+test_debian-9 \
+test_ubuntu-14.04 \
+test_ubuntu-16.04 \
+test_ubuntu-17.10
+test: test_centos-7 test_debian-9 test_ubuntu-14.04 test_ubuntu-16.04 test_ubuntu-17.10
+test_centos-7: test_centos-7_cc test_centos-7_java test_centos-7_dotnet
+test_debian-9: test_debian-9_cc test_debian-9_java test_debian-9_dotnet
+test_ubuntu-14.04: test_ubuntu-14.04_cc test_ubuntu-14.04_java test_ubuntu-14.04_dotnet
+test_ubuntu-16.04: test_ubuntu-16.04_cc test_ubuntu-16.04_java test_ubuntu-16.04_dotnet
+test_ubuntu-17.10: test_ubuntu-17.10_cc test_ubuntu-17.10_java test_ubuntu-17.10_dotnet
 
 .PHONY: test_centos-7_cc test_centos-7_java test_centos-7_dotnet
-test_centos-7: test_centos-7_cc test_centos-7_java test_centos-7_dotnet
-test_centos-7_cc: export/centos-7/docker_test_cc.tar
-test_centos-7_java: export/centos-7/docker_test_java.tar
-test_centos-7_dotnet: export/centos-7/docker_test_dotnet.tar
+test_centos-7_cc: export/docker_centos-7_cc.tar
+test_centos-7_java: export/docker_centos-7_java.tar
+test_centos-7_dotnet: export/docker_centos-7_dotnet.tar
 
 .PHONY: test_debian-9_cc test_debian-9_java test_debian-9_dotnet
-test_debian-9: test_debian-9_cc test_debian-9_java test_debian-9_dotnet
-test_debian-9_cc: export/debian-9/docker_test_cc.tar
-test_debian-9_java: export/debian-9/docker_test_java.tar
-test_debian-9_dotnet: export/debian-9/docker_test_dotnet.tar
+test_debian-9_cc: export/docker_debian-9_cc.tar
+test_debian-9_java: export/docker_debian-9_java.tar
+test_debian-9_dotnet: export/docker_debian-9_dotnet.tar
 
 .PHONY: test_ubuntu-14.04_cc test_ubuntu-14.04_java test_ubuntu-14.04_dotnet
-test_ubuntu-14.04: test_ubuntu-14.04_cc test_ubuntu-14.04_java test_ubuntu-14.04_dotnet
-test_ubuntu-14.04_cc: export/ubuntu-14.04/docker_test_cc.tar
-test_ubuntu-14.04_java: export/ubuntu-14.04/docker_test_java.tar
-test_ubuntu-14.04_dotnet: export/ubuntu-14.04/docker_test_dotnet.tar
+test_ubuntu-14.04_cc: export/docker_ubuntu-14.04_cc.tar
+test_ubuntu-14.04_java: export/docker_ubuntu-14.04_java.tar
+test_ubuntu-14.04_dotnet: export/docker_ubuntu-14.04_dotnet.tar
 
 .PHONY: test_ubuntu-16.04_cc test_ubuntu-16.04_java test_ubuntu-16.04_dotnet
-test_ubuntu-16.04: test_ubuntu-16.04_cc test_ubuntu-16.04_java test_ubuntu-16.04_dotnet
-test_ubuntu-16.04_cc: export/ubuntu-16.04/docker_test_cc.tar
-test_ubuntu-16.04_java: export/ubuntu-16.04/docker_test_java.tar
-test_ubuntu-16.04_dotnet: export/ubuntu-16.04/docker_test_dotnet.tar
+test_ubuntu-16.04_cc: export/docker_ubuntu-16.04_cc.tar
+test_ubuntu-16.04_java: export/docker_ubuntu-16.04_java.tar
+test_ubuntu-16.04_dotnet: export/docker_ubuntu-16.04_dotnet.tar
 
 .PHONY: test_ubuntu-17.10_cc test_ubuntu-17.10_java test_ubuntu-17.10_dotnet
-test_ubuntu-17.10: test_ubuntu-17.10_cc test_ubuntu-17.10_java test_ubuntu-17.10_dotnet
-test_ubuntu-17.10_cc: export/ubuntu-17.10/docker_test_cc.tar
-test_ubuntu-17.10_java: export/ubuntu-17.10/docker_test_java.tar
-test_ubuntu-17.10_dotnet: export/ubuntu-17.10/docker_test_dotnet.tar
+test_ubuntu-17.10_cc: export/docker_ubuntu-17.10_cc.tar
+test_ubuntu-17.10_java: export/docker_ubuntu-17.10_java.tar
+test_ubuntu-17.10_dotnet: export/docker_ubuntu-17.10_dotnet.tar
 
-export/%/docker_test_cc.tar: test/%/cc.Dockerfile /export/%/build.log
-	@docker image rm -f ${IMAGE}_$*_cc:install 2>/dev/null
-	docker build --no-cache -t ${IMAGE}_$*_cc:install -f $< export
-	docker save ${IMAGE}_$*_cc:install -o $@
-export/%/docker_test_java.tar: test/%/java.Dockerfile export/%/build.log
-	@docker image rm -f ${IMAGE}_$*_java:install 2>/dev/null
-	docker build --no-cache -t ${IMAGE}_$*_java:install -f $< export
-	docker save ${IMAGE}_$*_java:install -o $@
-export/%/docker_test_dotnet.tar: test/%/dotnet.Dockerfile export/%/build.log
-	@docker image rm -f ${IMAGE}_$*_dotnet:install 2>/dev/null
-	docker build --no-cache -t ${IMAGE}_$*_dotnet:install -f $< export
-	docker save ${IMAGE}_$*_dotnet:install -o $@
+export/docker_%_cc.tar: test/%/cc.Dockerfile export/$(IMAGE)_%_v$(OR_TOOLS_VERSION).tar.gz
+	-docker image rm -f $(IMAGE)_$*:cc 2>/dev/null
+	$(DOCKER_BUILD_CMD) -t $(IMAGE)_$*:cc -f $< export
+	docker save $(IMAGE)_$*:cc -o $@
+export/docker_%_java.tar: test/%/java.Dockerfile export/$(IMAGE)_%_v$(OR_TOOLS_VERSION).tar.gz
+	-docker image rm -f $(IMAGE)_$*:java 2>/dev/null
+	$(DOCKER_BUILD_CMD) -t $(IMAGE)_$*:java -f $< export
+	docker save $(IMAGE)_$*:java -o $@
+export/docker_%_dotnet.tar: test/%/dotnet.Dockerfile export/$(IMAGE)_%_v$(OR_TOOLS_VERSION).tar.gz
+	-docker image rm -f $(IMAGE)_$*:dotnet 2>/dev/null
+	$(DOCKER_BUILD_CMD) -t $(IMAGE)_$*:dotnet -f $< export
+	docker save $(IMAGE)_$*:dotnet -o $@
 
+# Docker test Bash
+.PHONY: bash_centos-7_cc bash_centos-7_java bash_centos-7_dotnet
+bash_centos-7_cc: export/docker_centos-7_cc.tar
+	$(DOCKER_RUN_CMD) $(IMAGE)_centos-7:cc /bin/bash
+bash_centos-7_java: export/docker_centos-7_java.tar
+	$(DOCKER_RUN_CMD) $(IMAGE)_centos-7:java /bin/bash
+bash_centos-7_dotnet: export/docker_centos-7_dotnet.tar
+	$(DOCKER_RUN_CMD) $(IMAGE)_centos-7:dotnet /bin/bash
+
+.PHONY: bash_debian-9_cc bash_debian-9_java bash_debian-9_dotnet
+bash_debian-9_cc: export/docker_debian-9_cc.tar
+	$(DOCKER_RUN_CMD) $(IMAGE)_debian-9:cc /bin/bash
+bash_debian-9_java: export/docker_debian-9_java.tar
+	$(DOCKER_RUN_CMD) $(IMAGE)_debian-9:java /bin/bash
+bash_debian-9_dotnet: export/docker_debian-9_dotnet.tar
+	$(DOCKER_RUN_CMD) $(IMAGE)_debian-9:dotnet /bin/bash
+
+.PHONY: bash_ubuntu-14.04_cc bash_ubuntu-14.04_java bash_ubuntu-14.04_dotnet
+bash_ubuntu-14.04_cc: export/docker_ubuntu-14.04_cc.tar
+	$(DOCKER_RUN_CMD) $(IMAGE)_ubuntu-14.04:cc /bin/bash
+bash_ubuntu-14.04_java: export/docker_ubuntu-14.04_java.tar
+	$(DOCKER_RUN_CMD) $(IMAGE)_ubuntu-14.04:java /bin/bash
+bash_ubuntu-14.04_dotnet: export/docker_ubuntu-14.04_dotnet.tar
+	$(DOCKER_RUN_CMD) $(IMAGE)_ubuntu-14.04:dotnet /bin/bash
+
+.PHONY: bash_ubuntu-16.04_cc bash_ubuntu-16.04_java bash_ubuntu-16.04_dotnet
+bash_ubuntu-16.04_cc: export/docker_ubuntu-16.04_cc.tar
+	$(DOCKER_RUN_CMD) $(IMAGE)_ubuntu-16.04:cc /bin/bash
+bash_ubuntu-16.04_java: export/docker_ubuntu-16.04_java.tar
+	$(DOCKER_RUN_CMD) $(IMAGE)_ubuntu-16.04:java /bin/bash
+bash_ubuntu-16.04_dotnet: export/docker_ubuntu-16.04_dotnet.tar
+	$(DOCKER_RUN_CMD) $(IMAGE)_ubuntu-16.04:dotnet /bin/bash
+
+.PHONY: bash_ubuntu-17.10_cc bash_ubuntu-17.10_java bash_ubuntu-17.10_dotnet
+bash_ubuntu-17.10_cc: export/docker_ubuntu-17.10_cc.tar
+	$(DOCKER_RUN_CMD) $(IMAGE)_ubuntu-17.10:cc /bin/bash
+bash_ubuntu-17.10_java: export/docker_ubuntu-17.10_java.tar
+	$(DOCKER_RUN_CMD) $(IMAGE)_ubuntu-17.10:java /bin/bash
+bash_ubuntu-17.10_dotnet: export/docker_ubuntu-17.10_dotnet.tar
+	$(DOCKER_RUN_CMD) $(IMAGE)_ubuntu-17.10:dotnet /bin/bash
+
+# Export Dir
 export:
 	mkdir export
 # rule export/% prevent other rules e.g. export/%/dokcer.devel.tar
@@ -304,32 +368,6 @@ export/ubuntu-16.04: | export
 export/ubuntu-17.10: | export
 	mkdir export/ubuntu-17.10
 
-#-include generated.mk
-##DISTROLIST = centos-7 debian-9 ubuntu-14.04 ubuntu-16.04 ubuntu-17.10
-#DISTROLIST = centos-7
-##LANGLIST = cc java dotnet
-#LANGLIST = cc
-#
-#generated.mk: Makefile
-#	-@rm -f $@
-## Generate the meta rules
-#	@echo -n "test_archives: generated.mk" > $@;
-#	@for distro in $(DISTROLIST) ; do \
-#  for lang in $(LANGLIST) ; do \
-#    echo -n " test_$${distro}-archive_$${lang}"; \
-#  done >> $@; \
-#done
-#	@echo "" >> $@;
-#	@echo "" >> $@;
-## Generate all test inside containers rules
-#	@for distro in $(DISTROLIST) ; do \
-#  for lang in $(LANGLIST) ; do \
-#    echo "test_$${distro}-archive_$${lang}: $${distro}-archive"; \
-#    echo "	docker build -f test/$${distro}/$${lang}.Dockerfile -t $${distro}_$${lang}:testing export"; \
-#    echo ""; \
-#  done >> $@; \
-#done
-
 .PHONY: python-test
 python-test: manylinux1-test
 
@@ -337,16 +375,15 @@ python-test: manylinux1-test
 ##  CLEAN  ##
 #############
 .PHONY: clean
-clean: clean_all_images clean_all_containers
-	-rm generated.mk
+clean: clean_all_containers clean_all_images
 
 .PHONY: clean_all_images
 clean_all_images:
-	docker rmi `docker images -a -q`
+	-docker rmi `docker images -a -q`
 
 .PHONY: clean_all_containers
 clean_all_containers:
-	docker rm `docker ps -a -q`
+	-docker rm `docker ps -a -q`
 
 .PHONY: distclean
 distclean: clean

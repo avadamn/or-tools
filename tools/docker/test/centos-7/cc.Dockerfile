@@ -1,9 +1,15 @@
 FROM centos:7
 LABEL maintainer="corentinl@google.com"
 
-RUN yum -y update
-RUN yum -y groupinstall 'Development Tools'
+RUN yum -y update && \
+yum -y groupinstall 'Development Tools' && \
+yum -y install which zlib-devel
 
-ADD or-tools_CentOS-7.5*.tar.gz .
-RUN tar xzf or-tools_CentOS-7.5*.tar.gz .
+WORKDIR /root
 
+# automatically uncompress archive
+# src: https://docs.docker.com/engine/reference/builder/#add
+ADD or-tools_centos-7_v*.tar.gz .
+
+#RUN cd or-tools_*_v* && \
+#make cc
