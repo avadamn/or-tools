@@ -11,9 +11,11 @@ help:
 	@echo "make python: Build manylinux python 'ortools' wheel packages (2.7, 3.5, 3.6)."
 	@echo "make delivery: Build 'archives' and 'python' targets."
 	@echo
-	@echo "make test_archives: Test OR-Tools archives for all supported <distro> for all supported <language>."
-	@echo "make test_python: Test OR-Tools python wheel package archive."
-	@echo "make test_delivery: Test 'archives' and 'python' targets."
+	@echo "make docker_<distro>: Build image containing or-tools and its prerequisite."
+	@echo "make bash_<distro>: Run container using the docker_<distro> image."
+	@echo "make test_<distro>: Test OR-Tools archive for all specified language for the specified <distro>."
+	@echo "make test_<distro>_<lang>: Test OR-Tools archive for the specified <distro> and <lang>."
+	@echo "make bash_<distro>_<lang>: Run container using the docker_<distro>_<lang> image."
 	@echo
 	@echo "make test_<distro>_<language>: Test OR-Tools archive on <distro> distro for <language> language."
 	@echo "make clean: Clean all docker images but keep archives (aka don\'t touch export directory)."
@@ -219,7 +221,7 @@ docker_ubuntu-16.04: export/docker_ubuntu-16.04.tar
 docker_ubuntu-17.10: export/docker_ubuntu-17.10.tar
 export/docker_%.tar: %.Dockerfile | export
 	-docker image rm -f $(IMAGE)_$*:devel 2>/dev/null
-	$(DOCKER_BUILD_CMD) -t $(IMAGE)_$*:devel -f $< .
+	$(DOCKER_BUILD_CMD) --build-arg SRC_GIT_BRANCH=$(OR_TOOLS_BRANCH) -t $(IMAGE)_$*:devel -f $< .
 	docker save $(IMAGE)_$*:devel -o $@
 
 # Docker Bash
@@ -259,6 +261,7 @@ export/$(IMAGE)_%_v$(OR_TOOLS_VERSION).tar.gz: export/docker_%.tar | export/%
      cp *.tar.gz /export/$*"
 	mv export/$*/$(IMAGE)_flatzinc_*.tar.gz export/$(IMAGE)_flatzinc_$*_v$(OR_TOOLS_VERSION).tar.gz
 	mv export/$*/$(IMAGE)_*.tar.gz export/$(IMAGE)_$*_v$(OR_TOOLS_VERSION).tar.gz
+	rmdir export/$*
 
 # Test Archive
 .PHONY: test \
