@@ -44,10 +44,10 @@ ifeq ("$(SYSTEM)","unix")
 	OS = $(shell uname -s)
 	LIB_PREFIX = lib
 	PRE_LIB = -Wl,-rpath $(OR_TOOLS_TOP)/lib -L$(OR_TOOLS_TOP)/lib
-	OR_TOOLS_LNK = $(PRE_LIB) -lortools
-	CVRPTW_LNK = $(PRE_LIB) -lcvrptw_lib $(PRE_LIB) -lortools
-	DIMACS_LNK = $(PRE_LIB) -ldimacs $(PRE_LIB) -lortools
-	FAP_LNK = $(PRE_LIB) -lfap $(PRE_LIB) -lortools
+	OR_TOOLS_LNK = $(PRE_LIB) -lprotobuf -lglog -lgflags -lCbcSolver -lCbc -lOsiCbc -lCgl -lClpSolver -lClp -lOsiClp -lOsi -lCoinUtils -lortools
+	CVRPTW_LNK = $(PRE_LIB) -lcvrptw_lib $(PRE_LIB) -lglog -lgflags -lortools
+	DIMACS_LNK = $(PRE_LIB) -ldimacs $(PRE_LIB) -lgflags -lortools
+	FAP_LNK = $(PRE_LIB) -lfap $(PRE_LIB) -lglog -lgflags -lortools
 	ifeq ($(OS),Linux)
 		CPP_COMPILER = g++
 		CCC = $(CPP_COMPILER) -fPIC -std=c++0x
