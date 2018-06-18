@@ -243,7 +243,7 @@ bash_ubuntu-17.10_dotnet: export/docker_ubuntu-17.10_dotnet.tar
 	$(DOCKER_RUN_CMD) or-tools_ubuntu-17.10:dotnet /bin/bash
 
 # Test Archive
-.PHONY: test_archives \
+.PHONY: test_archives test_archives_cc test_archives_java test_archives_dotnet \
 test_centos-7 \
 test_debian-9 \
 test_ubuntu-14.04 \
@@ -255,6 +255,28 @@ test_debian-9 \
 test_ubuntu-14.04 \
 test_ubuntu-16.04 \
 test_ubuntu-17.10
+
+test_archives_cc: \
+test_centos-7_cc \
+test_debian-9_cc \
+test_ubuntu-14.04_cc \
+test_ubuntu-16.04_cc \
+test_ubuntu-17.10_cc
+
+test_archives_java: \
+test_centos-7_java \
+test_debian-9_java \
+test_ubuntu-14.04_java \
+test_ubuntu-16.04_java \
+test_ubuntu-17.10_java
+
+test_archives_dotnet: \
+test_centos-7_dotnet \
+test_debian-9_dotnet \
+test_ubuntu-14.04_dotnet \
+test_ubuntu-16.04_dotnet \
+test_ubuntu-17.10_dotnet
+
 test_centos-7: test_centos-7_cc test_centos-7_java test_centos-7_dotnet
 test_debian-9: test_debian-9_cc test_debian-9_java test_debian-9_dotnet
 test_ubuntu-14.04: test_ubuntu-14.04_cc test_ubuntu-14.04_java test_ubuntu-14.04_dotnet
@@ -288,16 +310,13 @@ test_ubuntu-17.10_dotnet: export/test_ubuntu-17.10_dotnet.log
 
 export/test_%_cc.log: export/docker_%_cc.tar
 	@docker load -i $<
-	$(DOCKER_RUN_CMD) or-tools_$*:cc /bin/sh -c "cd or-tools_*_v* && make test_cc"
-	date > $@
+	$(DOCKER_RUN_CMD) or-tools_$*:cc /bin/sh -c "cd or-tools_*_v* && make test_cc" > $@
 export/test_%_java.log: export/docker_%_java.tar
 	@docker load -i $<
-	$(DOCKER_RUN_CMD) or-tools_$*:java /bin/sh -c "cd or-tools_*_v* && make test_java"
-	date > $@
+	$(DOCKER_RUN_CMD) or-tools_$*:java /bin/sh -c "cd or-tools_*_v* && make test_java" > $@
 export/test_%_dotnet.log: export/docker_%_dotnet.tar
 	@docker load -i $<
-	$(DOCKER_RUN_CMD) or-tools_$*:dotnet /bin/sh -c "cd or-tools_*_v* && make test_dotnet"
-	date > $@
+	$(DOCKER_RUN_CMD) or-tools_$*:dotnet /bin/sh -c "cd or-tools_*_v* && make test_dotnet" > $@
 
 #############
 ##  CLEAN  ##
