@@ -136,7 +136,9 @@ archive_ubuntu-17.10: export/or-tools_ubuntu-17.10_v$(OR_TOOLS_VERSION).tar.gz
 export/or-tools_%_v$(OR_TOOLS_VERSION).tar.gz: export/docker_%.tar | export/%
 	@docker load -i $<
 	$(DOCKER_RUN_CMD) -w /root/or-tools -v `pwd`/export:/export or-tools_$*:devel /bin/sh -c \
-		"make test; make archive fz_archive; cp *.tar.gz /export/$*"
+		"make test; make archive; cp *.tar.gz /export/$*"
+	$(DOCKER_RUN_CMD) -w /root/or-tools -v `pwd`/export:/export or-tools_$*:devel /bin/sh -c \
+		"make test_fz; make fz_archive; cp *.tar.gz /export/$*"
 	mv export/$*/or-tools_flatzinc_*.tar.gz export/or-tools_flatzinc_$*_v$(OR_TOOLS_VERSION).tar.gz
 	mv export/$*/or-tools_*.tar.gz export/or-tools_$*_v$(OR_TOOLS_VERSION).tar.gz
 	rmdir export/$*
