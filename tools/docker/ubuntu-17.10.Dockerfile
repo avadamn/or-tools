@@ -21,3 +21,4 @@ WORKDIR /root
 RUN git clone -b "$SRC_GIT_BRANCH" --single-branch https://github.com/google/or-tools
 WORKDIR /root/or-tools
 RUN make third_party
+RUN make all -j5

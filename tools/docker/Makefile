@@ -97,7 +97,7 @@ docker_debian-9: export/docker_debian-9.tar
 docker_ubuntu-14.04: export/docker_ubuntu-14.04.tar
 docker_ubuntu-16.04: export/docker_ubuntu-16.04.tar
 docker_ubuntu-17.10: export/docker_ubuntu-17.10.tar
-export/docker_%.tar: %.Dockerfile | export
+export/docker_%.tar: %.Dockerfile ../Makefile.cc ../../ortools | export
 	-docker image rm -f or-tools_$*:devel 2>/dev/null
 	$(DOCKER_BUILD_CMD) --build-arg SRC_GIT_BRANCH=$(OR_TOOLS_BRANCH) -t or-tools_$*:devel -f $< .
 	docker save or-tools_$*:devel -o $@
@@ -136,12 +136,7 @@ archive_ubuntu-17.10: export/or-tools_ubuntu-17.10_v$(OR_TOOLS_VERSION).tar.gz
 export/or-tools_%_v$(OR_TOOLS_VERSION).tar.gz: export/docker_%.tar | export/%
 	@docker load -i $<
 	$(DOCKER_RUN_CMD) -w /root/or-tools -v `pwd`/export:/export or-tools_$*:devel /bin/sh -c \
-		"git pull; \
-     make clean; \
-     make all -j 5; \
-     make test; \
-     make archive fz_archive; \
-     cp *.tar.gz /export/$*"
+		"make test; make archive fz_archive; cp *.tar.gz /export/$*"
 	mv export/$*/or-tools_flatzinc_*.tar.gz export/or-tools_flatzinc_$*_v$(OR_TOOLS_VERSION).tar.gz
 	mv export/$*/or-tools_*.tar.gz export/or-tools_$*_v$(OR_TOOLS_VERSION).tar.gz
 	rmdir export/$*
