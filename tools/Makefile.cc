@@ -13,13 +13,13 @@ endif
 
 # Define the OR_ROOT directory.
 ifeq ($(OR_TOOLS_TOP),)
-	OR_ROOT =
+  OR_ROOT =
 else
-	ifeq "$(SYSTEM)" "win"
-		OR_ROOT = $(OR_TOOLS_TOP)\\
-	else
-		OR_ROOT = $(OR_TOOLS_TOP)/
-	endif
+  ifeq "$(SYSTEM)" "win"
+    OR_ROOT = $(OR_TOOLS_TOP)\\
+  else
+    OR_ROOT = $(OR_TOOLS_TOP)/
+  endif
 endif
 
 # Useful directories.
@@ -39,105 +39,105 @@ JAVA_BIN = java
 
 # Unix specific part.
 ifeq ("$(SYSTEM)","unix")
-	# Defines OR_TOOLS_TOP if it is not already defined.
-	OR_TOOLS_TOP ?= $(shell pwd)
-	OS = $(shell uname -s)
-	LIB_PREFIX = lib
-	PRE_LIB = -Wl,-rpath $(OR_TOOLS_TOP)/lib -L$(OR_TOOLS_TOP)/lib -L$(OR_TOOLS_TOP)/lib64
-	OR_TOOLS_LNK = $(PRE_LIB) -lprotobuf -lglog -lgflags -lCbcSolver -lCbc -lOsiCbc -lCgl -lClpSolver -lClp -lOsiClp -lOsi -lCoinUtils -lortools
-	CVRPTW_LNK = $(PRE_LIB) -lcvrptw_lib $(PRE_LIB) -lglog -lgflags -lortools
-	DIMACS_LNK = $(PRE_LIB) -ldimacs $(PRE_LIB) -lgflags -lortools
-	FAP_LNK = $(PRE_LIB) -lfap $(PRE_LIB) -lglog -lgflags -lortools
-	ifeq ($(OS),Linux)
-		CPP_COMPILER = g++
-		CCC = $(CPP_COMPILER) -fPIC -std=c++0x
-		LD_FLAGS = -lz -lrt -lpthread
-		LBITS = $(shell getconf LONG_BIT)
-		ifeq ($(LBITS),64)
-			PORT = Linux64
-			ARCH = -DARCH_K8
-			NETPLATFORM = anycpu
-		else
-			PORT = Linux32
-			NETPLATFORM = x86
-		endif
-		CSC = mcs
-		MONO = LD_LIBRARY_PATH=$(LIB_DIR):$(LD_LIBRARY_PATH) mono
-		L = so
-	endif
-	ifeq ($(OS),Darwin) # Assume Mac Os X
-		CPP_COMPILER = clang++
-		CCC = $(CPP_COMPILER) -fPIC -std=c++11
-		LD_FLAGS = -lz
-		ARCH = -DARCH_K8
-		PORT = MacOsX64
-		CSC = mcs
-		MONO =	DYLD_FALLBACK_LIBRARY_PATH=$(LIB_DIR):$(DYLD_LIBRARY_PATH) mono
-		NETPLATFORM = x64
-		L = dylib
-	endif
-	O = o
-	E =
-	OBJ_OUT = -o #
-	EXE_OUT = -o #
-	DEL = rm -f
-	S = /
-	CPSEP = :
-	CLP_INC = -DUSE_CLP
-	CBC_INC = -DUSE_CBC
-	GLOP_INC = -DUSE_GLOP
-	BOP_INC = -DUSE_BOP
-	DEBUG = -O4 -DNDEBUG
-	CFLAGS = $(DEBUG) -I$(INC_DIR) -I$(INC_EX_DIR) $(ARCH) -Wno-deprecated \
-		$(CBC_INC) $(CLP_INC) $(GLOP_INC) $(BOP_INC)
-	WHICH = which
-	TO_NULL = 2\> /dev/null
+  # Defines OR_TOOLS_TOP if it is not already defined.
+  OR_TOOLS_TOP ?= $(shell pwd)
+  OS = $(shell uname -s)
+  LIB_PREFIX = lib
+  PRE_LIB = -Wl,-rpath $(OR_TOOLS_TOP)/lib -L$(OR_TOOLS_TOP)/lib -L$(OR_TOOLS_TOP)/lib64
+  OR_TOOLS_LNK = $(PRE_LIB) -lprotobuf -lglog -lgflags -lCbcSolver -lCbc -lOsiCbc -lCgl -lClpSolver -lClp -lOsiClp -lOsi -lCoinUtils -lortools
+  CVRPTW_LNK = $(PRE_LIB) -lcvrptw_lib $(PRE_LIB) -lglog -lgflags -lortools
+  DIMACS_LNK = $(PRE_LIB) -ldimacs $(PRE_LIB) -lgflags -lortools
+  FAP_LNK = $(PRE_LIB) -lfap $(PRE_LIB) -lglog -lgflags -lortools
+  ifeq ($(OS),Linux)
+    CPP_COMPILER = g++
+    CCC = $(CPP_COMPILER) -fPIC -std=c++0x
+    LD_FLAGS = -lz -lrt -lpthread
+    LBITS = $(shell getconf LONG_BIT)
+    ifeq ($(LBITS),64)
+      PORT = Linux64
+      ARCH = -DARCH_K8
+      NETPLATFORM = anycpu
+    else
+      PORT = Linux32
+      NETPLATFORM = x86
+    endif
+    CSC = mcs
+    MONO = LD_LIBRARY_PATH=$(LIB_DIR):$(LD_LIBRARY_PATH) mono
+    L = so
+  endif
+  ifeq ($(OS),Darwin) # Assume Mac Os X
+    CPP_COMPILER = clang++
+    CCC = $(CPP_COMPILER) -fPIC -std=c++11
+    LD_FLAGS = -lz
+    ARCH = -DARCH_K8
+    PORT = MacOsX64
+    CSC = mcs
+    MONO = DYLD_FALLBACK_LIBRARY_PATH=$(LIB_DIR):$(DYLD_LIBRARY_PATH) mono
+    NETPLATFORM = x64
+    L = dylib
+  endif
+  O = o
+  E =
+  OBJ_OUT = -o #
+  EXE_OUT = -o #
+  DEL = rm -f
+  S = /
+  CPSEP = :
+  CLP_INC = -DUSE_CLP
+  CBC_INC = -DUSE_CBC
+  GLOP_INC = -DUSE_GLOP
+  BOP_INC = -DUSE_BOP
+  DEBUG = -O4 -DNDEBUG
+  CFLAGS = $(DEBUG) -I$(INC_DIR) -I$(INC_EX_DIR) $(ARCH) -Wno-deprecated \
+    $(CBC_INC) $(CLP_INC) $(GLOP_INC) $(BOP_INC)
+  WHICH = which
+  TO_NULL = 2\> /dev/null
 endif
 
 # Windows specific part.
 ifeq ("$(SYSTEM)","win")
-	ifeq ("$(Platform)", "X64")
-		PLATFORM = Win64
-	endif
-	ifeq ("$(Platform)", "x64")
-		PLATFORM = Win64
-	endif
-	ifeq ("$(PLATFORM)", "Win64")
-		PORT = VisualStudio$(VISUAL_STUDIO)-64b
-		NETPLATFORM = x64
-	else
-		PORT = VisualStudio$(VISUAL_STUDIO)-32b
-		NETPLATFORM = x86
-	endif
-	CLP_INC = -DUSE_CLP
-	CBC_INC = -DUSE_CBC
-	GLOP_INC = -DUSE_GLOP
-	BOP_INC = -DUSE_BOP
-	CFLAGS= /D_SILENCE_STDEXT_HASH_DEPRECATION_WARNINGS -nologo $(DEBUG) \
-		$(CBC_INC) $(CLP_INC) /D__WIN32__ /I$(INC_DIR)\\src\\windows \
-		/DGFLAGS_DLL_DECL= /DGFLAGS_DLL_DECLARE_FLAG= /DGFLAGS_DLL_DEFINE_FLAG= \
-		/I$(INC_DIR) /I$(INC_EX_DIR) $(GLOP_INC) $(BOP_INC)
-	LD_FLAGS = psapi.lib ws2_32.lib
-	LIB_PREFIX =
-	PRE_LIB =
-	L = lib
-	OR_TOOLS_LNK = lib\\ortools.lib
-	CVRPTW_LNK = lib\\cvrptw_lib.lib lib\\ortools.lib
-	DIMACS_LNK = lib\\dimacs.lib lib\\ortools.lib
-	O=obj
-	E=.exe
-	OBJ_OUT = /Fo
-	EXE_OUT = /Fe
-	DEL = del
-	S = \\
-	CPSEP = ;
-	DEBUG=/O2 -DNDEBUG
-	CPP_COMPILER = cl
-	CCC = $(CPP_COMPILER) /EHsc /MD /nologo
-	CSC=csc
-	MONO=
-	WHICH = where
-	TO_NULL = 2> NUL
+  ifeq ("$(Platform)", "X64")
+    PLATFORM = Win64
+  endif
+  ifeq ("$(Platform)", "x64")
+    PLATFORM = Win64
+  endif
+  ifeq ("$(PLATFORM)", "Win64")
+    PORT = VisualStudio$(VISUAL_STUDIO)-64b
+    NETPLATFORM = x64
+  else
+    PORT = VisualStudio$(VISUAL_STUDIO)-32b
+    NETPLATFORM = x86
+  endif
+  CLP_INC = -DUSE_CLP
+  CBC_INC = -DUSE_CBC
+  GLOP_INC = -DUSE_GLOP
+  BOP_INC = -DUSE_BOP
+  CFLAGS= /D_SILENCE_STDEXT_HASH_DEPRECATION_WARNINGS -nologo $(DEBUG) \
+    $(CBC_INC) $(CLP_INC) /D__WIN32__ /I$(INC_DIR)\\src\\windows \
+    /DGFLAGS_DLL_DECL= /DGFLAGS_DLL_DECLARE_FLAG= /DGFLAGS_DLL_DEFINE_FLAG= \
+    /I$(INC_DIR) /I$(INC_EX_DIR) $(GLOP_INC) $(BOP_INC)
+  LD_FLAGS = psapi.lib ws2_32.lib
+  LIB_PREFIX =
+  PRE_LIB =
+  L = lib
+  OR_TOOLS_LNK = lib\\ortools.lib
+  CVRPTW_LNK = lib\\cvrptw_lib.lib lib\\ortools.lib
+  DIMACS_LNK = lib\\dimacs.lib lib\\ortools.lib
+  O=obj
+  E=.exe
+  OBJ_OUT = /Fo
+  EXE_OUT = /Fe
+  DEL = del
+  S = \\
+  CPSEP = ;
+  DEBUG=/O2 -DNDEBUG
+  CPP_COMPILER = cl
+  CCC = $(CPP_COMPILER) /EHsc /MD /nologo
+  CSC=csc
+  MONO=
+  WHICH = where
+  TO_NULL = 2> NUL
 endif
 
 OR_TOOLS_LIBS = $(LIB_DIR)/$(LIB_PREFIX)ortools.$L
@@ -150,35 +150,35 @@ FAP_LIBS = $(LIB_DIR)/$(LIB_PREFIX)fap.$L
 all: cc test
 
 EXE = \
-	$(BIN_DIR)/costas_array$E \
-	$(BIN_DIR)/cryptarithm$E \
-	$(BIN_DIR)/cvrp_disjoint_tw$E \
-	$(BIN_DIR)/cvrptw$E \
-	$(BIN_DIR)/cvrptw_with_breaks$E \
-	$(BIN_DIR)/cvrptw_with_refueling$E \
-	$(BIN_DIR)/cvrptw_with_resources$E \
-	$(BIN_DIR)/cvrptw_with_stop_times_and_resources$E \
-	$(BIN_DIR)/dimacs_assignment$E \
-	$(BIN_DIR)/dobble_ls$E \
-	$(BIN_DIR)/flexible_jobshop$E \
-	$(BIN_DIR)/golomb$E \
-	$(BIN_DIR)/jobshop$E \
-	$(BIN_DIR)/jobshop_ls$E \
-	$(BIN_DIR)/jobshop_earlytardy$E \
-	$(BIN_DIR)/magic_square$E \
-	$(BIN_DIR)/model_util$E \
-	$(BIN_DIR)/multidim_knapsack$E \
-	$(BIN_DIR)/network_routing$E \
-	$(BIN_DIR)/nqueens$E \
-	$(BIN_DIR)/pdptw$E \
-	$(BIN_DIR)/sports_scheduling$E \
-	$(BIN_DIR)/tsp$E \
-	$(BIN_DIR)/linear_assignment_api$E \
-	$(BIN_DIR)/strawberry_fields_with_column_generation$E \
-	$(BIN_DIR)/linear_programming$E \
-	$(BIN_DIR)/linear_solver_protocol_buffers$E \
-	$(BIN_DIR)/integer_programming$E \
-	$(BIN_DIR)/flow_api$E
+$(BIN_DIR)/costas_array$E \
+$(BIN_DIR)/cryptarithm$E \
+$(BIN_DIR)/cvrp_disjoint_tw$E \
+$(BIN_DIR)/cvrptw$E \
+$(BIN_DIR)/cvrptw_with_breaks$E \
+$(BIN_DIR)/cvrptw_with_refueling$E \
+$(BIN_DIR)/cvrptw_with_resources$E \
+$(BIN_DIR)/cvrptw_with_stop_times_and_resources$E \
+$(BIN_DIR)/dimacs_assignment$E \
+$(BIN_DIR)/dobble_ls$E \
+$(BIN_DIR)/flexible_jobshop$E \
+$(BIN_DIR)/golomb$E \
+$(BIN_DIR)/jobshop$E \
+$(BIN_DIR)/jobshop_ls$E \
+$(BIN_DIR)/jobshop_earlytardy$E \
+$(BIN_DIR)/magic_square$E \
+$(BIN_DIR)/model_util$E \
+$(BIN_DIR)/multidim_knapsack$E \
+$(BIN_DIR)/network_routing$E \
+$(BIN_DIR)/nqueens$E \
+$(BIN_DIR)/pdptw$E \
+$(BIN_DIR)/sports_scheduling$E \
+$(BIN_DIR)/tsp$E \
+$(BIN_DIR)/linear_assignment_api$E \
+$(BIN_DIR)/strawberry_fields_with_column_generation$E \
+$(BIN_DIR)/linear_programming$E \
+$(BIN_DIR)/linear_solver_protocol_buffers$E \
+$(BIN_DIR)/integer_programming$E \
+$(BIN_DIR)/flow_api$E
 
 
 cc: $(EXE)
@@ -464,6 +464,8 @@ printport:
 	@echo PORT = $(PORT)
 	@echo OS = $(OS)
 	@echo CCC = $(CCC)
+	@echo CFLAGS = $(CFLAGS)
+	@echo LD_FLAGS = $(LD_FLAGS)
 
 # Include user makefile
 
