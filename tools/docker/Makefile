@@ -97,7 +97,7 @@ docker_debian-9: export/docker_debian-9.tar
 docker_ubuntu-14.04: export/docker_ubuntu-14.04.tar
 docker_ubuntu-16.04: export/docker_ubuntu-16.04.tar
 docker_ubuntu-17.10: export/docker_ubuntu-17.10.tar
-export/docker_%.tar: %.Dockerfile ../Makefile.cc ../../ortools | export
+export/docker_%.tar: %.Dockerfile ../Makefile.cc ../../makefiles ../../ortools | export
 	-docker image rm -f or-tools_$*:devel 2>/dev/null
 	$(DOCKER_BUILD_CMD) --build-arg SRC_GIT_BRANCH=$(OR_TOOLS_BRANCH) -t or-tools_$*:devel -f $< .
 	docker save or-tools_$*:devel -o $@
