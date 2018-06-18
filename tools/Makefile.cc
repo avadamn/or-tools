@@ -43,7 +43,7 @@ ifeq ("$(SYSTEM)","unix")
 	OR_TOOLS_TOP ?= $(shell pwd)
 	OS = $(shell uname -s)
 	LIB_PREFIX = lib
-	PRE_LIB = -Wl,-rpath $(OR_TOOLS_TOP)/lib -L$(OR_TOOLS_TOP)/lib
+	PRE_LIB = -Wl,-rpath $(OR_TOOLS_TOP)/lib -L$(OR_TOOLS_TOP)/lib -L$(OR_TOOLS_TOP)/lib64
 	OR_TOOLS_LNK = $(PRE_LIB) -lprotobuf -lglog -lgflags -lCbcSolver -lCbc -lOsiCbc -lCgl -lClpSolver -lClp -lOsiClp -lOsi -lCoinUtils -lortools
 	CVRPTW_LNK = $(PRE_LIB) -lcvrptw_lib $(PRE_LIB) -lglog -lgflags -lortools
 	DIMACS_LNK = $(PRE_LIB) -ldimacs $(PRE_LIB) -lgflags -lortools
