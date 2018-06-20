@@ -75,8 +75,8 @@ ifeq ($(SYSTEM),unix)
   endif # ifeq($(OS),Darwin)
   LIB_PREFIX = lib
   PRE_LIB = -L$(OR_ROOT)lib -L$(OR_ROOT)lib64
-  OR_TOOLS_LNK = $(PRE_LIB) -lprotobuf -lglog -lgflags -lCbcSolver -lCbc -lOsiCbc -lCgl -lClpSolver -lClp -lOsiClp -lOsi -lCoinUtils -lortools
-  CVRPTW_LNK = $(PRE_LIB) -lcvrptw_lib -lprotobuf -lglog -lgflags -lortools
+  OR_TOOLS_LNK = $(PRE_LIB) -lprotobuf -lglog -lgflags -lCbcSolver -lCbc -lClp -lOsiClp -lOsi -lCoinUtils -lortools
+  CVRPTW_LNK = $(PRE_LIB) -lcvrptw_lib -lprotobuf -lglog -lgflags -lCbcSolver -lCbc -lClp -lOsiClp -lCoinUtils -lortools
   DIMACS_LNK = $(PRE_LIB) -ldimacs -lgflags -lortools
   O = o
   E =
