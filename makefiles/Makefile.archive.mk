@@ -127,6 +127,7 @@ cc_archive: cc create_dirs
 	$(COPY) ortools$Sgen$Sortools$Sutil$S*.pb.h temp$S$(INSTALL_DIR)$Sinclude$Sortools$Sutil
 ifeq ($(SYSTEM),win)
 	$(COPY) tools$Smake.exe temp$S$(INSTALL_DIR)
+	$(COPY) tools$Swhich.exe temp$S$(INSTALL_DIR)
 	cd temp$S$(INSTALL_DIR)$Sinclude && ..$S..$S..$Stools$Star.exe -C ..$S..$S..$Sdependencies$Sinstall$Sinclude -c -v gflags | ..$S..$S..$Stools$Star.exe xvm
 	cd temp$S$(INSTALL_DIR)$Sinclude && ..$S..$S..$Stools$Star.exe -C ..$S..$S..$Sdependencies$Sinstall$Sinclude -c -v glog | ..$S..$S..$Stools$Star.exe xvm
 	cd temp$S$(INSTALL_DIR)$Sinclude && ..$S..$S..$Stools$Star.exe -C ..$S..$S..$Sdependencies$Sinstall$Sinclude -c -v google | ..$S..$S..$Stools$Star.exe xvm
