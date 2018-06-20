@@ -204,6 +204,7 @@ else
 endif
 	-$(DELREC) $(TEMP_FZ_DIR)
 
+.PHONY: test_archive
 test_archive: $(INSTALL_DIR)$(ARCHIVE_EXT)
 	-$(DELREC) temp
 	$(MKDIR) temp
@@ -212,7 +213,7 @@ test_archive: $(INSTALL_DIR)$(ARCHIVE_EXT)
 ifeq ($(SYSTEM),win)
 	tools$Sunzip.exe $(INSTALL_DIR).zip -d temp
 else
-	tar -x -v -f $(INSTALL_DIR).tar.gz -C temp
+	tar -xvf $(INSTALL_DIR).tar.gz -C temp
 endif
 	cd temp$S$(INSTALL_DIR) && $(MAKE) test && cd ../.. && $(RENAME) lib2 lib && echo "archive test succeeded" || ( cd ../.. && $(RENAME) lib2 lib && echo "archive test failed" && exit 1)
 
