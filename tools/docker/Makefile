@@ -317,13 +317,16 @@ test_ubuntu-17.10_dotnet: export/ubuntu-17.10/test_dotnet.log
 
 export/%/test_cc.log: export/%/docker_cc.tar
 	@docker load -i $<
-	$(DOCKER_RUN_CMD) or-tools_$*:cc /bin/sh -c "cd or-tools_*_v* && make test_cc" > $@
+	$(DOCKER_RUN_CMD) or-tools_$*:cc /bin/sh -c "cd or-tools_*_v* && make test_cc" | tee $@
+	rm $@
 export/%/test_java.log: export/%/docker_java.tar
 	@docker load -i $<
-	$(DOCKER_RUN_CMD) or-tools_$*:java /bin/sh -c "cd or-tools_*_v* && make test_java" > $@
+	$(DOCKER_RUN_CMD) or-tools_$*:java /bin/sh -c "cd or-tools_*_v* && make test_java" | tee $@
+	rm $@
 export/%/test_dotnet.log: export/%/docker_dotnet.tar
 	@docker load -i $<
-	$(DOCKER_RUN_CMD) or-tools_$*:dotnet /bin/sh -c "cd or-tools_*_v* && make test_dotnet" > $@
+	$(DOCKER_RUN_CMD) or-tools_$*:dotnet /bin/sh -c "cd or-tools_*_v* && make test_dotnet" | tee $@
+	rm $@
 
 #############
 ##  CLEAN  ##
