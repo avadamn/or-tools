@@ -6,20 +6,20 @@
 # Let's discover something about where we run
 # Let's discover something about where we run
 ifeq ($(OS), Windows_NT)
-  SYSTEM = win
+SYSTEM = win
 else
-  SYSTEM = unix
+SYSTEM = unix
 endif
 
 # Define the OR_ROOT directory.
 ifeq ($(OR_TOOLS_TOP),)
-  OR_ROOT =
+OR_ROOT =
 else
-  ifeq "$(SYSTEM)" "win"
-    OR_ROOT = $(OR_TOOLS_TOP)\\
-  else
-    OR_ROOT = $(OR_TOOLS_TOP)/
-  endif
+ifeq "$(SYSTEM)" "win"
+OR_ROOT = $(OR_TOOLS_TOP)\\
+else
+OR_ROOT = $(OR_TOOLS_TOP)/
+endif
 endif
 
 # Useful directories.
@@ -34,23 +34,13 @@ LIB_DIR = $(OR_ROOT)lib
 
 CLR_DLL_NAME?=Google.OrTools
 
-JAVAC_BIN = javac
-JAVA_BIN = java
 JAVAFLAGS = -Djava.library.path=$(LIB_DIR)
 
 # Unix specific part.
-ifeq ("$(SYSTEM)","unix")
+ifeq ($(SYSTEM),unix)
   # Defines OR_TOOLS_TOP if it is not already defined.
   OR_TOOLS_TOP ?= $(shell pwd)
   OS = $(shell uname -s)
-  LIB_PREFIX = lib
-  PRE_LIB = \
--L$(OR_ROOT)lib \
--L$(OR_ROOT)lib64
-  OR_TOOLS_LNK = $(PRE_LIB) -lprotobuf -lglog -lgflags -lCbcSolver -lCbc -lOsiCbc -lCgl -lClpSolver -lClp -lOsiClp -lOsi -lCoinUtils -lortools
-  CVRPTW_LNK = $(PRE_LIB) -lcvrptw_lib -lprotobuf -lglog -lgflags -lortools
-  DIMACS_LNK = $(PRE_LIB) -ldimacs -lgflags -lortools
-  FAP_LNK = $(PRE_LIB) -lfap -lglog -lgflags -lortools
   ifeq ($(OS),Linux)
     CXX = g++
     LDFLAGS = \
@@ -65,45 +55,52 @@ ifeq ("$(SYSTEM)","unix")
       NETPLATFORM = anycpu
     else
       PORT = Linux32
+      ARCH =
       NETPLATFORM = x86
     endif
-    CSC = mcs
     MONO = LD_LIBRARY_PATH=$(LIB_DIR):$(LD_LIBRARY_PATH) mono
     L = so
-  endif
+  endif # ifeq($(OS),Linux)
   ifeq ($(OS),Darwin) # Assume Mac Os X
     CXX = clang++
     LDFLAGS = \
 -Wl,-rpath,@loader_path \
 -Wl,-rpath,@loader_path/../lib \
 -lz
-    ARCH = -DARCH_K8
     PORT = MacOsX64
-    CSC = mcs
-    MONO = DYLD_FALLBACK_LIBRARY_PATH=$(LIB_DIR):$(DYLD_LIBRARY_PATH) mono
+    ARCH = -DARCH_K8
     NETPLATFORM = x64
+    MONO = DYLD_FALLBACK_LIBRARY_PATH=$(LIB_DIR):$(DYLD_LIBRARY_PATH) mono
     L = dylib
-  endif
+  endif # ifeq($(OS),Darwin)
+  LIB_PREFIX = lib
+  PRE_LIB = -L$(OR_ROOT)lib -L$(OR_ROOT)lib64
+  OR_TOOLS_LNK = $(PRE_LIB) -lprotobuf -lglog -lgflags -lCbcSolver -lCbc -lOsiCbc -lCgl -lClpSolver -lClp -lOsiClp -lOsi -lCoinUtils -lortools
+  CVRPTW_LNK = $(PRE_LIB) -lcvrptw_lib -lprotobuf -lglog -lgflags -lortools
+  DIMACS_LNK = $(PRE_LIB) -ldimacs -lgflags -lortools
   O = o
   E =
   OBJ_OUT = -o #
   EXE_OUT = -o #
-  DEL = rm -f
   S = /
   CPSEP = :
-  CLP_INC = -DUSE_CLP
-  CBC_INC = -DUSE_CBC
-  GLOP_INC = -DUSE_GLOP
-  BOP_INC = -DUSE_BOP
   DEBUG = -O4 -DNDEBUG
   CXXFLAGS = -fPIC -std=c++11 $(DEBUG) -I$(INC_DIR) -I$(INC_EX_DIR) $(ARCH) -Wno-deprecated \
-    $(CBC_INC) $(CLP_INC) $(GLOP_INC) $(BOP_INC)
-  WHICH = which
-  TO_NULL = 2> /dev/null
+-DUSE_CBC -DUSE_CLP -DUSE_BOP -DUSE_GLOP
+  DEL = rm -f
+  CXX_BIN := $(shell command -v $(CXX) 2> /dev/null)
+ifneq ($(JAVA_HOME),)
+  JAVAC_BIN := $(shell command -v $(JAVA_HOME)/bin/javac 2> /dev/null)
+  JAVA_BIN := $(shell command -v $(JAVA_HOME)/bin/java 2> /dev/null)
+else
+  JAVAC_BIN := $(shell command -v javac 2> /dev/null)
+  JAVA_BIN := $(shell command -v java 2> /dev/null)
+endif
+  CSC_BIN := $(shell command -v mcs 2> /dev/null)
 endif
 
 # Windows specific part.
-ifeq ("$(SYSTEM)","win")
+ifeq ($(SYSTEM),win)
   ifeq ("$(Platform)", "X64")
     PLATFORM = Win64
   endif
@@ -117,15 +114,11 @@ ifeq ("$(SYSTEM)","win")
     PORT = VisualStudio$(VISUAL_STUDIO)-32b
     NETPLATFORM = x86
   endif
-  CLP_INC = -DUSE_CLP
-  CBC_INC = -DUSE_CBC
-  GLOP_INC = -DUSE_GLOP
-  BOP_INC = -DUSE_BOP
   CXX = cl
   CXXFLAGS = /EHsc /MD /nologo /D_SILENCE_STDEXT_HASH_DEPRECATION_WARNINGS -nologo $(DEBUG) \
     /D__WIN32__ /DGFLAGS_DLL_DECL= /DGFLAGS_DLL_DECLARE_FLAG= /DGFLAGS_DLL_DEFINE_FLAG= \
     /I$(INC_DIR)\\src\\windows /I$(INC_DIR) /I$(INC_EX_DIR) \
-    $(CBC_INC) $(CLP_INC) $(GLOP_INC) $(BOP_INC)
+    -DUSE_CBC -DUSE_CLP -DUSE_BOP -DUSE_GLOP
   LDFLAGS = psapi.lib ws2_32.lib
   LIB_PREFIX =
   PRE_LIB =
@@ -141,10 +134,13 @@ ifeq ("$(SYSTEM)","win")
   S = \\
   CPSEP = ;
   DEBUG=/O2 -DNDEBUG
-  CSC=csc
+  # We can't use `where` since it's return all matching pathnames
+  # so we ship which.exe and use it
+  CXX_BIN := $(shell which $(CXX) 2> NUL)
+  JAVAC_BIN := $(shell which javac 2> NUL)
+  JAVA_BIN := $(shell which java 2> NUL)
+  CSC_BIN := $(shell which csc 2> NUL)
   MONO=
-  WHICH = where
-  TO_NULL = 2> NUL
 endif
 
 OR_TOOLS_LIBS = $(LIB_DIR)/$(LIB_PREFIX)ortools.$L
@@ -194,35 +190,46 @@ clean:
 	-$(DEL) $(BIN_DIR)$S*.exe
 	-$(DEL) $(OBJ_DIR)$S*.$O
 
-ifeq ($(shell $(WHICH) $(CPP_COMPILER) $(TO_NULL)),)
+ifndef CXX_BIN
 test_cc ccc rcc:
-	@echo the $(CPP_COMPILER) command was not find in your Path
+	@echo the $(CXX) command was not found in your PATH
 else
 test_cc: $(BIN_DIR)/golomb$E $(BIN_DIR)/cvrptw$E
 	$(BIN_DIR)$Sgolomb$E
 	$(BIN_DIR)/cvrptw$E
 # C++ generic running command
-  ifeq ($(EX),)
+ifeq ($(EX),)
 ccc rcc:
 	@echo No C++ file was provided, the $@ target must be used like so: \
 	make $@ EX=path/to/the/example/example.cc
-  else
+else # ifeq ($(EX),)
 ccc: $(BIN_DIR)$S$(basename $(notdir $(EX)))$E
 
 rcc: $(BIN_DIR)$S$(basename $(notdir $(EX)))$E
 	@echo running $(BIN_DIR)$S$(basename $(notdir $(EX)))$E
 	$(BIN_DIR)$S$(basename $(notdir $(EX)))$E $(ARGS)
-  endif
+endif # ifeq ($(EX),)
+endif # ifeq ($(CXX_BIN),)
+
+HAS_JAVA = true
+ifndef JAVA_BIN
+HAS_JAVA =
+endif
+ifndef JAVAC_BIN
+HAS_JAVA =
 endif
 
-ifeq ($(shell $(WHICH) java $(TO_NULL)),)
+ifndef HAS_JAVA
 test_java rjava cjava:
-	@echo the java command was not find in your Path
+	@echo the java or javac command was not found in your PATH
 else
 test_java:
-	$(JAVAC_BIN) -d $(OBJ_DIR) -cp $(LIB_DIR)$Scom.google.ortools.jar$(CPSEP)$(LIB_DIR)$Sprotobuf.jar $(EX_DIR)$Scom$Sgoogle$Sortools$Ssamples$STsp.java
-	$(JAVA_BIN) $(JAVAFLAGS) -cp $(OBJ_DIR)$(CPSEP)$(LIB_DIR)$Scom.google.ortools.jar$(CPSEP)$(LIB_DIR)$Sprotobuf.jar com.google.ortools.samples.Tsp $(ARGS)
-	@echo $(WHICH) javaa $(TO_NULL)
+	$(JAVAC_BIN) -d $(OBJ_DIR) -cp $(LIB_DIR)$Scom.google.ortools.jar$(CPSEP)$(LIB_DIR)$Sprotobuf.jar \
+ $(EX_DIR)$Scom$Sgoogle$Sortools$Ssamples$STsp.java
+	$(JAVA_BIN) $(JAVAFLAGS) -cp $(OBJ_DIR)$(CPSEP)$(LIB_DIR)$Scom.google.ortools.jar$(CPSEP)$(LIB_DIR)$Sprotobuf.jar \
+ com.google.ortools.samples.Tsp $(ARGS)
+	@echo javac = $(JAVAC_BIN)
+	@echo java = $(JAVA_BIN)
 
 # Java generic compilation command.
   ifeq ($(EX),)
@@ -254,12 +261,12 @@ rjava: $(EX_class_file)
   endif
 endif
 
-ifeq ($(shell $(WHICH) $(CSC) $(TO_NULL)),)
+ifndef CSC_BIN
 test_cs:
-	@echo the $(CSC) command was not find in your Path
+	@echo the csc(win) or mcs(unix) command was not found in your PATH
 else
 test_cs:
-	$(CSC) /target:exe /out:$(BIN_DIR)$Scsflow.exe /platform:$(NETPLATFORM) /lib:$(BIN_DIR) /r:Google.OrTools.dll /r:Google.Protobuf.dll $(CS_EX_DIR)$Scsflow.cs
+	$(CSC_BIN) /target:exe /out:$(BIN_DIR)$Scsflow.exe /platform:$(NETPLATFORM) /lib:$(BIN_DIR) /r:Google.OrTools.dll /r:Google.Protobuf.dll $(CS_EX_DIR)$Scsflow.cs
 	$(MONO) $(BIN_DIR)$Scsflow.exe $(ARGS)
 
 test: test_cc test_java test_cs
@@ -271,7 +278,7 @@ rcs:
   else
 # .NET generic compilation command.
 $(BIN_DIR)$S$(basename $(notdir $(EX))).exe: $(BIN_DIR)/$(CLR_DLL_NAME).dll $(EX)
-	$(CSC) $(SIGNING_FLAGS) /target:exe /out:$(BIN_DIR)$S$(basename $(notdir $(EX))).exe /platform:$(NETPLATFORM) /lib:$(BIN_DIR) /r:$(CLR_DLL_NAME).dll /r:Google.Protobuf.dll $(EX)
+	$(CSC_BIN) $(SIGNING_FLAGS) /target:exe /out:$(BIN_DIR)$S$(basename $(notdir $(EX))).exe /platform:$(NETPLATFORM) /lib:$(BIN_DIR) /r:$(CLR_DLL_NAME).dll /r:Google.Protobuf.dll $(EX)
 
 csc: $(BIN_DIR)$S$(basename $(notdir $(EX))).exe
 
@@ -476,12 +483,12 @@ detect_port:
 .PHONY: detect_cc
 detect_cc:
 	@echo CXX = $(CXX)
+	@echo CXX_BIN = $(CXX_BIN)
 	@echo CXXFLAGS = $(CXXFLAGS)
 	@echo LDFLAGS = $(LDFLAGS)
 	@echo OR_TOOLS_LNK = $(OR_TOOLS_LNK)
 	@echo CVRPTW_LNK = $(CVRPTW_LNK)
 	@echo DIMACS_LNK = $(DIMACS_LNK)
-	@echo FAP_LNK = $(FAP_LNK)
 
 .PHONY: detect_java
 detect_java:
@@ -491,7 +498,7 @@ detect_java:
 
 .PHONY: detect_csharp
 detect_csharp:
-	@echo CSC = $(CSC)
+	@echo CSC_BIN = $(CSC_BIN)
 	@echo SIGNING_FLAGS = $(SIGNING_FLAGS)
 	@echo CLR_DLL_NAME = $(CLR_DLL_NAME)
 
