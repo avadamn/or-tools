@@ -100,7 +100,7 @@ docker_ubuntu-17.10: export/docker_ubuntu-17.10.tar
 
 export/%/docker.tar: %.Dockerfile ../Makefile.cc ../../makefiles ../../ortools | export/%
 	-docker image rm -f or-tools_$*:devel 2>/dev/null
-	$(DOCKER_BUILD_CMD) --build-arg SRC_GIT_BRANCH=$(OR_TOOLS_BRANCH) -t or-tools_$*:devel -f $< .
+	$(DOCKER_BUILD_CMD) --build-arg SRC_GIT_BRANCH=$(OR_TOOLS_BRANCH) -t or-tools_$*:devel -f $< export/$*
 	docker save or-tools_$*:devel -o $@
 
 # Run container using devel docker image
