@@ -36,6 +36,7 @@ CLR_DLL_NAME?=Google.OrTools
 
 JAVAC_BIN = javac
 JAVA_BIN = java
+JAVAFLAGS = -Djava.library.path=$(LIB_DIR)
 
 # Unix specific part.
 ifeq ("$(SYSTEM)","unix")
@@ -43,15 +44,20 @@ ifeq ("$(SYSTEM)","unix")
   OR_TOOLS_TOP ?= $(shell pwd)
   OS = $(shell uname -s)
   LIB_PREFIX = lib
-  PRE_LIB = -Wl,-rpath $(OR_TOOLS_TOP)/lib64 -Wl,-rpath $(OR_TOOLS_TOP)/lib -L$(OR_TOOLS_TOP)/lib -L$(OR_TOOLS_TOP)/lib64
+  PRE_LIB = \
+-L$(OR_ROOT)lib \
+-L$(OR_ROOT)lib64
   OR_TOOLS_LNK = $(PRE_LIB) -lprotobuf -lglog -lgflags -lCbcSolver -lCbc -lOsiCbc -lCgl -lClpSolver -lClp -lOsiClp -lOsi -lCoinUtils -lortools
-  CVRPTW_LNK = $(PRE_LIB) -lcvrptw_lib $(PRE_LIB) -lprotobuf -lglog -lgflags -lortools
-  DIMACS_LNK = $(PRE_LIB) -ldimacs $(PRE_LIB) -lgflags -lortools
-  FAP_LNK = $(PRE_LIB) -lfap $(PRE_LIB) -lglog -lgflags -lortools
+  CVRPTW_LNK = $(PRE_LIB) -lcvrptw_lib -lprotobuf -lglog -lgflags -lortools
+  DIMACS_LNK = $(PRE_LIB) -ldimacs -lgflags -lortools
+  FAP_LNK = $(PRE_LIB) -lfap -lglog -lgflags -lortools
   ifeq ($(OS),Linux)
-    CPP_COMPILER = g++
-    CCC = $(CPP_COMPILER) -fPIC -std=c++0x
-    LD_FLAGS = -lz -lrt -lpthread
+    CXX = g++
+    LDFLAGS = \
+-Wl,-rpath,"\$$ORIGIN" \
+-Wl,-rpath,"\$$ORIGIN/../lib64" \
+-Wl,-rpath,"\$$ORIGIN/../lib" \
+-lz -lrt -lpthread
     LBITS = $(shell getconf LONG_BIT)
     ifeq ($(LBITS),64)
       PORT = Linux64
@@ -66,9 +72,11 @@ ifeq ("$(SYSTEM)","unix")
     L = so
   endif
   ifeq ($(OS),Darwin) # Assume Mac Os X
-    CPP_COMPILER = clang++
-    CCC = $(CPP_COMPILER) -fPIC -std=c++11
-    LD_FLAGS = -lz
+    CXX = clang++
+    LDFLAGS = \
+-Wl,-rpath,@loader_path \
+-Wl,-rpath,@loader_path/../lib \
+-lz
     ARCH = -DARCH_K8
     PORT = MacOsX64
     CSC = mcs
@@ -88,10 +96,10 @@ ifeq ("$(SYSTEM)","unix")
   GLOP_INC = -DUSE_GLOP
   BOP_INC = -DUSE_BOP
   DEBUG = -O4 -DNDEBUG
-  CFLAGS = $(DEBUG) -I$(INC_DIR) -I$(INC_EX_DIR) $(ARCH) -Wno-deprecated \
+  CXXFLAGS = -fPIC -std=c++11 $(DEBUG) -I$(INC_DIR) -I$(INC_EX_DIR) $(ARCH) -Wno-deprecated \
     $(CBC_INC) $(CLP_INC) $(GLOP_INC) $(BOP_INC)
   WHICH = which
-  TO_NULL = 2\> /dev/null
+  TO_NULL = 2> /dev/null
 endif
 
 # Windows specific part.
@@ -113,11 +121,12 @@ ifeq ("$(SYSTEM)","win")
   CBC_INC = -DUSE_CBC
   GLOP_INC = -DUSE_GLOP
   BOP_INC = -DUSE_BOP
-  CFLAGS= /D_SILENCE_STDEXT_HASH_DEPRECATION_WARNINGS -nologo $(DEBUG) \
-    $(CBC_INC) $(CLP_INC) /D__WIN32__ /I$(INC_DIR)\\src\\windows \
-    /DGFLAGS_DLL_DECL= /DGFLAGS_DLL_DECLARE_FLAG= /DGFLAGS_DLL_DEFINE_FLAG= \
-    /I$(INC_DIR) /I$(INC_EX_DIR) $(GLOP_INC) $(BOP_INC)
-  LD_FLAGS = psapi.lib ws2_32.lib
+  CXX = cl
+  CXXFLAGS = /EHsc /MD /nologo /D_SILENCE_STDEXT_HASH_DEPRECATION_WARNINGS -nologo $(DEBUG) \
+    /D__WIN32__ /DGFLAGS_DLL_DECL= /DGFLAGS_DLL_DECLARE_FLAG= /DGFLAGS_DLL_DEFINE_FLAG= \
+    /I$(INC_DIR)\\src\\windows /I$(INC_DIR) /I$(INC_EX_DIR) \
+    $(CBC_INC) $(CLP_INC) $(GLOP_INC) $(BOP_INC)
+  LDFLAGS = psapi.lib ws2_32.lib
   LIB_PREFIX =
   PRE_LIB =
   L = lib
@@ -132,8 +141,6 @@ ifeq ("$(SYSTEM)","win")
   S = \\
   CPSEP = ;
   DEBUG=/O2 -DNDEBUG
-  CPP_COMPILER = cl
-  CCC = $(CPP_COMPILER) /EHsc /MD /nologo
   CSC=csc
   MONO=
   WHICH = where
@@ -180,13 +187,12 @@ $(BIN_DIR)/linear_solver_protocol_buffers$E \
 $(BIN_DIR)/integer_programming$E \
 $(BIN_DIR)/flow_api$E
 
-
 cc: $(EXE)
 
 clean:
 	-$(DEL) $(EXE)
-	-$(DEL) $(BIN_DIR)$S$.exe
-	-$(DEL) $(OBJ_DIR)$S*$O
+	-$(DEL) $(BIN_DIR)$S*.exe
+	-$(DEL) $(OBJ_DIR)$S*.$O
 
 ifeq ($(shell $(WHICH) $(CPP_COMPILER) $(TO_NULL)),)
 test_cc ccc rcc:
@@ -214,8 +220,8 @@ test_java rjava cjava:
 	@echo the java command was not find in your Path
 else
 test_java:
-	javac -d $(OBJ_DIR) -cp $(LIB_DIR)$Scom.google.ortools.jar$(CPSEP)$(LIB_DIR)$Sprotobuf.jar $(EX_DIR)$Scom$Sgoogle$Sortools$Ssamples$STsp.java
-	java -Djava.library.path=$(LIB_DIR) -cp $(OBJ_DIR)$(CPSEP)$(LIB_DIR)$Scom.google.ortools.jar$(CPSEP)$(LIB_DIR)$Sprotobuf.jar com.google.ortools.samples.Tsp $(ARGS)
+	$(JAVAC_BIN) -d $(OBJ_DIR) -cp $(LIB_DIR)$Scom.google.ortools.jar$(CPSEP)$(LIB_DIR)$Sprotobuf.jar $(EX_DIR)$Scom$Sgoogle$Sortools$Ssamples$STsp.java
+	$(JAVA_BIN) $(JAVAFLAGS) -cp $(OBJ_DIR)$(CPSEP)$(LIB_DIR)$Scom.google.ortools.jar$(CPSEP)$(LIB_DIR)$Sprotobuf.jar com.google.ortools.samples.Tsp $(ARGS)
 	@echo $(WHICH) javaa $(TO_NULL)
 
 # Java generic compilation command.
@@ -279,196 +285,217 @@ endif
 # Constraint Programming and Routing examples.
 
 $(OBJ_DIR)$Scostas_array.$O: $(CPP_EX_DIR)$Scostas_array.cc $(INC_DIR)$Sortools$Sconstraint_solver$Sconstraint_solver.h
-	$(CCC) $(CFLAGS) -c $(CPP_EX_DIR)$Scostas_array.cc $(OBJ_OUT)$(OBJ_DIR)$Scostas_array.$O
+	$(CXX) $(CXXFLAGS) -c $(CPP_EX_DIR)$Scostas_array.cc $(OBJ_OUT)$(OBJ_DIR)$Scostas_array.$O
 
 $(BIN_DIR)/costas_array$E: $(OR_TOOLS_LIBS) $(OBJ_DIR)$Scostas_array.$O
-	$(CCC) $(CFLAGS) $(OBJ_DIR)$Scostas_array.$O $(OR_TOOLS_LNK) $(LD_FLAGS) $(EXE_OUT)$(BIN_DIR)$Scostas_array$E
+	$(CXX) $(CXXFLAGS) $(OBJ_DIR)$Scostas_array.$O $(OR_TOOLS_LNK) $(LDFLAGS) $(EXE_OUT)$(BIN_DIR)$Scostas_array$E
 
 $(OBJ_DIR)$Scryptarithm.$O:$(CPP_EX_DIR)$Scryptarithm.cc $(INC_DIR)$Sortools$Sconstraint_solver$Sconstraint_solver.h
-	$(CCC) $(CFLAGS) -c $(CPP_EX_DIR)$Scryptarithm.cc $(OBJ_OUT)$(OBJ_DIR)$Scryptarithm.$O
+	$(CXX) $(CXXFLAGS) -c $(CPP_EX_DIR)$Scryptarithm.cc $(OBJ_OUT)$(OBJ_DIR)$Scryptarithm.$O
 
 $(BIN_DIR)/cryptarithm$E: $(OR_TOOLS_LIBS) $(OBJ_DIR)$Scryptarithm.$O
-	$(CCC) $(CFLAGS) $(OBJ_DIR)$Scryptarithm.$O $(OR_TOOLS_LNK) $(LD_FLAGS) $(EXE_OUT)$(BIN_DIR)$Scryptarithm$E
+	$(CXX) $(CXXFLAGS) $(OBJ_DIR)$Scryptarithm.$O $(OR_TOOLS_LNK) $(LDFLAGS) $(EXE_OUT)$(BIN_DIR)$Scryptarithm$E
 
 $(OBJ_DIR)$Scvrp_disjoint_tw.$O: $(CPP_EX_DIR)$Scvrp_disjoint_tw.cc $(INC_DIR)$Sortools$Sconstraint_solver$Sconstraint_solver.h
-	$(CCC) $(CFLAGS) -c $(CPP_EX_DIR)$Scvrp_disjoint_tw.cc $(OBJ_OUT)$(OBJ_DIR)$Scvrp_disjoint_tw.$O
+	$(CXX) $(CXXFLAGS) -c $(CPP_EX_DIR)$Scvrp_disjoint_tw.cc $(OBJ_OUT)$(OBJ_DIR)$Scvrp_disjoint_tw.$O
 
 $(BIN_DIR)/cvrp_disjoint_tw$E: $(OR_TOOLS_LIBS) $(CVRPTW_LIBS) $(OBJ_DIR)$Scvrp_disjoint_tw.$O
-	$(CCC) $(CFLAGS) $(OBJ_DIR)$Scvrp_disjoint_tw.$O $(CVRPTW_LNK) $(LD_FLAGS) $(EXE_OUT)$(BIN_DIR)$Scvrp_disjoint_tw$E
+	$(CXX) $(CXXFLAGS) $(OBJ_DIR)$Scvrp_disjoint_tw.$O $(CVRPTW_LNK) $(LDFLAGS) $(EXE_OUT)$(BIN_DIR)$Scvrp_disjoint_tw$E
 
 $(OBJ_DIR)$Scvrptw.$O: $(CPP_EX_DIR)$Scvrptw.cc $(INC_DIR)$Sortools$Sconstraint_solver$Sconstraint_solver.h
-	$(CCC) $(CFLAGS) -c $(CPP_EX_DIR)$Scvrptw.cc $(OBJ_OUT)$(OBJ_DIR)$Scvrptw.$O
+	$(CXX) $(CXXFLAGS) -c $(CPP_EX_DIR)$Scvrptw.cc $(OBJ_OUT)$(OBJ_DIR)$Scvrptw.$O
 
 $(BIN_DIR)/cvrptw$E: $(OR_TOOLS_LIBS) $(CVRPTW_LIBS) $(OBJ_DIR)$Scvrptw.$O
-	$(CCC) $(CFLAGS) $(OBJ_DIR)$Scvrptw.$O $(CVRPTW_LNK) $(LD_FLAGS) $(EXE_OUT)$(BIN_DIR)$Scvrptw$E
+	$(CXX) $(CXXFLAGS) $(OBJ_DIR)$Scvrptw.$O $(CVRPTW_LNK) $(LDFLAGS) $(EXE_OUT)$(BIN_DIR)$Scvrptw$E
 
 $(OBJ_DIR)$Scvrptw_with_breaks.$O: $(CPP_EX_DIR)$Scvrptw_with_breaks.cc $(INC_DIR)$Sortools$Sconstraint_solver$Sconstraint_solver.h
-	$(CCC) $(CFLAGS) -c $(CPP_EX_DIR)$Scvrptw_with_breaks.cc $(OBJ_OUT)$(OBJ_DIR)$Scvrptw_with_breaks.$O
+	$(CXX) $(CXXFLAGS) -c $(CPP_EX_DIR)$Scvrptw_with_breaks.cc $(OBJ_OUT)$(OBJ_DIR)$Scvrptw_with_breaks.$O
 
 $(BIN_DIR)/cvrptw_with_breaks$E: $(OR_TOOLS_LIBS) $(CVRPTW_LIBS) $(CVRPTW_LIBS) $(OBJ_DIR)$Scvrptw_with_breaks.$O
-	$(CCC) $(CFLAGS) $(OBJ_DIR)$Scvrptw_with_breaks.$O $(CVRPTW_LNK) $(LD_FLAGS) $(EXE_OUT)$(BIN_DIR)$Scvrptw_with_breaks$E
+	$(CXX) $(CXXFLAGS) $(OBJ_DIR)$Scvrptw_with_breaks.$O $(CVRPTW_LNK) $(LDFLAGS) $(EXE_OUT)$(BIN_DIR)$Scvrptw_with_breaks$E
 
 $(OBJ_DIR)$Scvrptw_with_refueling.$O: $(CPP_EX_DIR)$Scvrptw_with_refueling.cc $(INC_DIR)$Sortools$Sconstraint_solver$Sconstraint_solver.h
-	$(CCC) $(CFLAGS) -c $(CPP_EX_DIR)$Scvrptw_with_refueling.cc $(OBJ_OUT)$(OBJ_DIR)$Scvrptw_with_refueling.$O
+	$(CXX) $(CXXFLAGS) -c $(CPP_EX_DIR)$Scvrptw_with_refueling.cc $(OBJ_OUT)$(OBJ_DIR)$Scvrptw_with_refueling.$O
 
 $(BIN_DIR)/cvrptw_with_refueling$E: $(OR_TOOLS_LIBS) $(CVRPTW_LIBS) $(CVRPTW_LIBS) $(OBJ_DIR)$Scvrptw_with_refueling.$O
-	$(CCC) $(CFLAGS) $(OBJ_DIR)$Scvrptw_with_refueling.$O $(CVRPTW_LNK) $(LD_FLAGS) $(EXE_OUT)$(BIN_DIR)$Scvrptw_with_refueling$E
+	$(CXX) $(CXXFLAGS) $(OBJ_DIR)$Scvrptw_with_refueling.$O $(CVRPTW_LNK) $(LDFLAGS) $(EXE_OUT)$(BIN_DIR)$Scvrptw_with_refueling$E
 
 $(OBJ_DIR)$Scvrptw_with_resources.$O: $(CPP_EX_DIR)$Scvrptw_with_resources.cc $(INC_DIR)$Sortools$Sconstraint_solver$Sconstraint_solver.h
-	$(CCC) $(CFLAGS) -c $(CPP_EX_DIR)$Scvrptw_with_resources.cc $(OBJ_OUT)$(OBJ_DIR)$Scvrptw_with_resources.$O
+	$(CXX) $(CXXFLAGS) -c $(CPP_EX_DIR)$Scvrptw_with_resources.cc $(OBJ_OUT)$(OBJ_DIR)$Scvrptw_with_resources.$O
 
 $(BIN_DIR)/cvrptw_with_resources$E: $(OR_TOOLS_LIBS) $(CVRPTW_LIBS) $(OBJ_DIR)$Scvrptw_with_resources.$O
-	$(CCC) $(CFLAGS) $(OBJ_DIR)$Scvrptw_with_resources.$O $(CVRPTW_LNK) $(LD_FLAGS) $(EXE_OUT)$(BIN_DIR)$Scvrptw_with_resources$E
+	$(CXX) $(CXXFLAGS) $(OBJ_DIR)$Scvrptw_with_resources.$O $(CVRPTW_LNK) $(LDFLAGS) $(EXE_OUT)$(BIN_DIR)$Scvrptw_with_resources$E
 
 $(OBJ_DIR)$Scvrptw_with_stop_times_and_resources.$O: $(CPP_EX_DIR)$Scvrptw_with_stop_times_and_resources.cc $(INC_DIR)$Sortools$Sconstraint_solver$Sconstraint_solver.h
-	$(CCC) $(CFLAGS) -c $(CPP_EX_DIR)$Scvrptw_with_stop_times_and_resources.cc $(OBJ_OUT)$(OBJ_DIR)$Scvrptw_with_stop_times_and_resources.$O
+	$(CXX) $(CXXFLAGS) -c $(CPP_EX_DIR)$Scvrptw_with_stop_times_and_resources.cc $(OBJ_OUT)$(OBJ_DIR)$Scvrptw_with_stop_times_and_resources.$O
 
 $(BIN_DIR)/cvrptw_with_stop_times_and_resources$E: $(OR_TOOLS_LIBS) $(CVRPTW_LIBS) $(OBJ_DIR)$Scvrptw_with_stop_times_and_resources.$O
-	$(CCC) $(CFLAGS) $(OBJ_DIR)$Scvrptw_with_stop_times_and_resources.$O $(CVRPTW_LNK) $(LD_FLAGS) $(EXE_OUT)$(BIN_DIR)$Scvrptw_with_stop_times_and_resources$E
+	$(CXX) $(CXXFLAGS) $(OBJ_DIR)$Scvrptw_with_stop_times_and_resources.$O $(CVRPTW_LNK) $(LDFLAGS) $(EXE_OUT)$(BIN_DIR)$Scvrptw_with_stop_times_and_resources$E
 
 $(OBJ_DIR)$Sdimacs_assignment.$O:$(CPP_EX_DIR)$Sdimacs_assignment.cc $(INC_DIR)$Sortools$Sconstraint_solver$Sconstraint_solver.h
-	$(CCC) $(CFLAGS) -c $(CPP_EX_DIR)$Sdimacs_assignment.cc $(OBJ_OUT)$(OBJ_DIR)$Sdimacs_assignment.$O
+	$(CXX) $(CXXFLAGS) -c $(CPP_EX_DIR)$Sdimacs_assignment.cc $(OBJ_OUT)$(OBJ_DIR)$Sdimacs_assignment.$O
 
 $(BIN_DIR)/dimacs_assignment$E: $(OR_TOOLS_LIBS) $(DIMACS_LIBS) $(OBJ_DIR)$Sdimacs_assignment.$O
-	$(CCC) $(CFLAGS) $(OBJ_DIR)$Sdimacs_assignment.$O $(DIMACS_LNK) $(LD_FLAGS) $(EXE_OUT)$(BIN_DIR)$Sdimacs_assignment$E
+	$(CXX) $(CXXFLAGS) $(OBJ_DIR)$Sdimacs_assignment.$O $(DIMACS_LNK) $(LDFLAGS) $(EXE_OUT)$(BIN_DIR)$Sdimacs_assignment$E
 
 $(OBJ_DIR)$Sdobble_ls.$O:$(CPP_EX_DIR)$Sdobble_ls.cc $(INC_DIR)$Sortools$Sconstraint_solver$Sconstraint_solver.h
-	$(CCC) $(CFLAGS) -c $(CPP_EX_DIR)$Sdobble_ls.cc $(OBJ_OUT)$(OBJ_DIR)$Sdobble_ls.$O
+	$(CXX) $(CXXFLAGS) -c $(CPP_EX_DIR)$Sdobble_ls.cc $(OBJ_OUT)$(OBJ_DIR)$Sdobble_ls.$O
 
 $(BIN_DIR)/dobble_ls$E: $(OR_TOOLS_LIBS) $(OBJ_DIR)$Sdobble_ls.$O
-	$(CCC) $(CFLAGS) $(OBJ_DIR)$Sdobble_ls.$O $(OR_TOOLS_LNK) $(LD_FLAGS) $(EXE_OUT)$(BIN_DIR)$Sdobble_ls$E
+	$(CXX) $(CXXFLAGS) $(OBJ_DIR)$Sdobble_ls.$O $(OR_TOOLS_LNK) $(LDFLAGS) $(EXE_OUT)$(BIN_DIR)$Sdobble_ls$E
 
 $(OBJ_DIR)$Sflexible_jobshop.$O:$(CPP_EX_DIR)$Sflexible_jobshop.cc $(INC_DIR)$Sortools$Sconstraint_solver$Sconstraint_solver.h $(CPP_EX_DIR)$Sflexible_jobshop.h
-	$(CCC) $(CFLAGS) -c $(CPP_EX_DIR)$Sflexible_jobshop.cc $(OBJ_OUT)$(OBJ_DIR)$Sflexible_jobshop.$O
+	$(CXX) $(CXXFLAGS) -c $(CPP_EX_DIR)$Sflexible_jobshop.cc $(OBJ_OUT)$(OBJ_DIR)$Sflexible_jobshop.$O
 
 $(BIN_DIR)/flexible_jobshop$E: $(OR_TOOLS_LIBS) $(OBJ_DIR)$Sflexible_jobshop.$O
-	$(CCC) $(CFLAGS) $(OBJ_DIR)$Sflexible_jobshop.$O $(OR_TOOLS_LNK) $(LD_FLAGS) $(EXE_OUT)$(BIN_DIR)$Sflexible_jobshop$E
+	$(CXX) $(CXXFLAGS) $(OBJ_DIR)$Sflexible_jobshop.$O $(OR_TOOLS_LNK) $(LDFLAGS) $(EXE_OUT)$(BIN_DIR)$Sflexible_jobshop$E
 
 $(OBJ_DIR)$Sgolomb.$O:$(CPP_EX_DIR)$Sgolomb.cc $(INC_DIR)$Sortools$Sconstraint_solver$Sconstraint_solver.h
-	$(CCC) $(CFLAGS) -c $(CPP_EX_DIR)$Sgolomb.cc $(OBJ_OUT)$(OBJ_DIR)$Sgolomb.$O
+	$(CXX) $(CXXFLAGS) -c $(CPP_EX_DIR)$Sgolomb.cc $(OBJ_OUT)$(OBJ_DIR)$Sgolomb.$O
 
 $(BIN_DIR)/golomb$E: $(OR_TOOLS_LIBS) $(OBJ_DIR)$Sgolomb.$O
-	$(CCC) $(CFLAGS) $(OBJ_DIR)$Sgolomb.$O $(OR_TOOLS_LNK) $(LD_FLAGS) $(EXE_OUT)$(BIN_DIR)$Sgolomb$E
+	$(CXX) $(CXXFLAGS) $(OBJ_DIR)$Sgolomb.$O $(OR_TOOLS_LNK) $(LDFLAGS) $(EXE_OUT)$(BIN_DIR)$Sgolomb$E
 
 $(OBJ_DIR)$Sjobshop.$O:$(CPP_EX_DIR)$Sjobshop.cc $(INC_DIR)$Sortools$Sconstraint_solver$Sconstraint_solver.h
-	$(CCC) $(CFLAGS) -c $(CPP_EX_DIR)$Sjobshop.cc $(OBJ_OUT)$(OBJ_DIR)$Sjobshop.$O
+	$(CXX) $(CXXFLAGS) -c $(CPP_EX_DIR)$Sjobshop.cc $(OBJ_OUT)$(OBJ_DIR)$Sjobshop.$O
 
 $(BIN_DIR)/jobshop$E: $(OR_TOOLS_LIBS) $(OBJ_DIR)$Sjobshop.$O
-	$(CCC) $(CFLAGS) $(OBJ_DIR)$Sjobshop.$O $(OR_TOOLS_LNK) $(LD_FLAGS) $(EXE_OUT)$(BIN_DIR)$Sjobshop$E
+	$(CXX) $(CXXFLAGS) $(OBJ_DIR)$Sjobshop.$O $(OR_TOOLS_LNK) $(LDFLAGS) $(EXE_OUT)$(BIN_DIR)$Sjobshop$E
 
 $(OBJ_DIR)$Sjobshop_ls.$O:$(CPP_EX_DIR)$Sjobshop_ls.cc $(INC_DIR)$Sortools$Sconstraint_solver$Sconstraint_solver.h
-	$(CCC) $(CFLAGS) -c $(CPP_EX_DIR)$Sjobshop_ls.cc $(OBJ_OUT)$(OBJ_DIR)$Sjobshop_ls.$O
+	$(CXX) $(CXXFLAGS) -c $(CPP_EX_DIR)$Sjobshop_ls.cc $(OBJ_OUT)$(OBJ_DIR)$Sjobshop_ls.$O
 
 $(BIN_DIR)/jobshop_ls$E: $(OR_TOOLS_LIBS) $(OBJ_DIR)$Sjobshop_ls.$O
-	$(CCC) $(CFLAGS) $(OBJ_DIR)$Sjobshop_ls.$O $(OR_TOOLS_LNK) $(LD_FLAGS) $(EXE_OUT)$(BIN_DIR)$Sjobshop_ls$E
+	$(CXX) $(CXXFLAGS) $(OBJ_DIR)$Sjobshop_ls.$O $(OR_TOOLS_LNK) $(LDFLAGS) $(EXE_OUT)$(BIN_DIR)$Sjobshop_ls$E
 
 $(OBJ_DIR)$Sjobshop_earlytardy.$O:$(CPP_EX_DIR)$Sjobshop_earlytardy.cc $(INC_DIR)$Sortools$Sconstraint_solver$Sconstraint_solver.h $(CPP_EX_DIR)$Sjobshop_earlytardy.h
-	$(CCC) $(CFLAGS) -c $(CPP_EX_DIR)$Sjobshop_earlytardy.cc $(OBJ_OUT)$(OBJ_DIR)$Sjobshop_earlytardy.$O
+	$(CXX) $(CXXFLAGS) -c $(CPP_EX_DIR)$Sjobshop_earlytardy.cc $(OBJ_OUT)$(OBJ_DIR)$Sjobshop_earlytardy.$O
 
 $(BIN_DIR)/jobshop_earlytardy$E: $(OR_TOOLS_LIBS) $(OBJ_DIR)$Sjobshop_earlytardy.$O
-	$(CCC) $(CFLAGS) $(OBJ_DIR)$Sjobshop_earlytardy.$O $(OR_TOOLS_LNK) $(LD_FLAGS) $(EXE_OUT)$(BIN_DIR)$Sjobshop_earlytardy$E
+	$(CXX) $(CXXFLAGS) $(OBJ_DIR)$Sjobshop_earlytardy.$O $(OR_TOOLS_LNK) $(LDFLAGS) $(EXE_OUT)$(BIN_DIR)$Sjobshop_earlytardy$E
 
 $(OBJ_DIR)$Smagic_square.$O:$(CPP_EX_DIR)$Smagic_square.cc $(INC_DIR)$Sortools$Sconstraint_solver$Sconstraint_solver.h
-	$(CCC) $(CFLAGS) -c $(CPP_EX_DIR)$Smagic_square.cc $(OBJ_OUT)$(OBJ_DIR)$Smagic_square.$O
+	$(CXX) $(CXXFLAGS) -c $(CPP_EX_DIR)$Smagic_square.cc $(OBJ_OUT)$(OBJ_DIR)$Smagic_square.$O
 
 $(BIN_DIR)/magic_square$E: $(OR_TOOLS_LIBS) $(OBJ_DIR)$Smagic_square.$O
-	$(CCC) $(CFLAGS) $(OBJ_DIR)$Smagic_square.$O $(OR_TOOLS_LNK) $(LD_FLAGS) $(EXE_OUT)$(BIN_DIR)$Smagic_square$E
+	$(CXX) $(CXXFLAGS) $(OBJ_DIR)$Smagic_square.$O $(OR_TOOLS_LNK) $(LDFLAGS) $(EXE_OUT)$(BIN_DIR)$Smagic_square$E
 
 $(OBJ_DIR)$Smodel_util.$O:$(CPP_EX_DIR)$Smodel_util.cc $(INC_DIR)$Sortools$Sconstraint_solver$Smodel.pb.h $(INC_DIR)$Sortools$Sconstraint_solver$Sconstraint_solver.h
-	$(CCC) $(CFLAGS) -c $(CPP_EX_DIR)$Smodel_util.cc $(OBJ_OUT)$(OBJ_DIR)$Smodel_util.$O
+	$(CXX) $(CXXFLAGS) -c $(CPP_EX_DIR)$Smodel_util.cc $(OBJ_OUT)$(OBJ_DIR)$Smodel_util.$O
 
 $(BIN_DIR)/model_util$E: $(OR_TOOLS_LIBS) $(OBJ_DIR)$Smodel_util.$O
-	$(CCC) $(CFLAGS) $(OBJ_DIR)$Smodel_util.$O $(OR_TOOLS_LNK) $(LD_FLAGS) $(EXE_OUT)$(BIN_DIR)$Smodel_util$E
+	$(CXX) $(CXXFLAGS) $(OBJ_DIR)$Smodel_util.$O $(OR_TOOLS_LNK) $(LDFLAGS) $(EXE_OUT)$(BIN_DIR)$Smodel_util$E
 
 $(OBJ_DIR)$Smultidim_knapsack.$O:$(CPP_EX_DIR)$Smultidim_knapsack.cc $(INC_DIR)$Sortools$Sconstraint_solver$Sconstraint_solver.h
-	$(CCC) $(CFLAGS) -c $(CPP_EX_DIR)$Smultidim_knapsack.cc $(OBJ_OUT)$(OBJ_DIR)$Smultidim_knapsack.$O
+	$(CXX) $(CXXFLAGS) -c $(CPP_EX_DIR)$Smultidim_knapsack.cc $(OBJ_OUT)$(OBJ_DIR)$Smultidim_knapsack.$O
 
 $(BIN_DIR)/multidim_knapsack$E: $(OR_TOOLS_LIBS) $(OBJ_DIR)$Smultidim_knapsack.$O
-	$(CCC) $(CFLAGS) $(OBJ_DIR)$Smultidim_knapsack.$O $(OR_TOOLS_LNK) $(LD_FLAGS) $(EXE_OUT)$(BIN_DIR)$Smultidim_knapsack$E
+	$(CXX) $(CXXFLAGS) $(OBJ_DIR)$Smultidim_knapsack.$O $(OR_TOOLS_LNK) $(LDFLAGS) $(EXE_OUT)$(BIN_DIR)$Smultidim_knapsack$E
 
 $(OBJ_DIR)$Snetwork_routing.$O:$(CPP_EX_DIR)$Snetwork_routing.cc $(INC_DIR)$Sortools$Sconstraint_solver$Sconstraint_solver.h
-	$(CCC) $(CFLAGS) -c $(CPP_EX_DIR)$Snetwork_routing.cc $(OBJ_OUT)$(OBJ_DIR)$Snetwork_routing.$O
+	$(CXX) $(CXXFLAGS) -c $(CPP_EX_DIR)$Snetwork_routing.cc $(OBJ_OUT)$(OBJ_DIR)$Snetwork_routing.$O
 
 $(BIN_DIR)/network_routing$E: $(OR_TOOLS_LIBS) $(GRAPH_DEPS) $(OBJ_DIR)$Snetwork_routing.$O
-	$(CCC) $(CFLAGS) $(OBJ_DIR)$Snetwork_routing.$O $(OR_TOOLS_LNK) $(GRAPH_LNK) $(LD_FLAGS) $(EXE_OUT)$(BIN_DIR)$Snetwork_routing$E
+	$(CXX) $(CXXFLAGS) $(OBJ_DIR)$Snetwork_routing.$O $(OR_TOOLS_LNK) $(GRAPH_LNK) $(LDFLAGS) $(EXE_OUT)$(BIN_DIR)$Snetwork_routing$E
 
 $(OBJ_DIR)$Snqueens.$O: $(CPP_EX_DIR)$Snqueens.cc $(INC_DIR)$Sortools$Sconstraint_solver$Sconstraint_solver.h
-	$(CCC) $(CFLAGS) -c $(CPP_EX_DIR)$Snqueens.cc $(OBJ_OUT)$(OBJ_DIR)$Snqueens.$O
+	$(CXX) $(CXXFLAGS) -c $(CPP_EX_DIR)$Snqueens.cc $(OBJ_OUT)$(OBJ_DIR)$Snqueens.$O
 
 $(BIN_DIR)/nqueens$E: $(OR_TOOLS_LIBS) $(OBJ_DIR)$Snqueens.$O
-	$(CCC) $(CFLAGS) $(OBJ_DIR)$Snqueens.$O $(OR_TOOLS_LNK) $(LD_FLAGS) $(EXE_OUT)$(BIN_DIR)$Snqueens$E
+	$(CXX) $(CXXFLAGS) $(OBJ_DIR)$Snqueens.$O $(OR_TOOLS_LNK) $(LDFLAGS) $(EXE_OUT)$(BIN_DIR)$Snqueens$E
 
 $(OBJ_DIR)$Spdptw.$O: $(CPP_EX_DIR)$Spdptw.cc $(INC_DIR)$Sortools$Sconstraint_solver$Sconstraint_solver.h
-	$(CCC) $(CFLAGS) -c $(CPP_EX_DIR)$Spdptw.cc $(OBJ_OUT)$(OBJ_DIR)$Spdptw.$O
+	$(CXX) $(CXXFLAGS) -c $(CPP_EX_DIR)$Spdptw.cc $(OBJ_OUT)$(OBJ_DIR)$Spdptw.$O
 
 $(BIN_DIR)/pdptw$E: $(OR_TOOLS_LIBS) $(OBJ_DIR)$Spdptw.$O
-	$(CCC) $(CFLAGS) $(OBJ_DIR)$Spdptw.$O $(OR_TOOLS_LNK) $(LD_FLAGS) $(EXE_OUT)$(BIN_DIR)$Spdptw$E
+	$(CXX) $(CXXFLAGS) $(OBJ_DIR)$Spdptw.$O $(OR_TOOLS_LNK) $(LDFLAGS) $(EXE_OUT)$(BIN_DIR)$Spdptw$E
 
 $(OBJ_DIR)$Ssports_scheduling.$O:$(CPP_EX_DIR)$Ssports_scheduling.cc $(INC_DIR)$Sortools$Sconstraint_solver$Sconstraint_solver.h
-	$(CCC) $(CFLAGS) -c $(CPP_EX_DIR)$Ssports_scheduling.cc $(OBJ_OUT)$(OBJ_DIR)$Ssports_scheduling.$O
+	$(CXX) $(CXXFLAGS) -c $(CPP_EX_DIR)$Ssports_scheduling.cc $(OBJ_OUT)$(OBJ_DIR)$Ssports_scheduling.$O
 
 $(BIN_DIR)/sports_scheduling$E: $(OR_TOOLS_LIBS) $(OBJ_DIR)$Ssports_scheduling.$O
-	$(CCC) $(CFLAGS) $(OBJ_DIR)$Ssports_scheduling.$O $(OR_TOOLS_LNK) $(LD_FLAGS) $(EXE_OUT)$(BIN_DIR)$Ssports_scheduling$E
+	$(CXX) $(CXXFLAGS) $(OBJ_DIR)$Ssports_scheduling.$O $(OR_TOOLS_LNK) $(LDFLAGS) $(EXE_OUT)$(BIN_DIR)$Ssports_scheduling$E
 
 $(OBJ_DIR)$Stsp.$O: $(CPP_EX_DIR)$Stsp.cc $(INC_DIR)$Sortools$Sconstraint_solver$Srouting.h
-	$(CCC) $(CFLAGS) -c $(CPP_EX_DIR)$Stsp.cc $(OBJ_OUT)$(OBJ_DIR)$Stsp.$O
+	$(CXX) $(CXXFLAGS) -c $(CPP_EX_DIR)$Stsp.cc $(OBJ_OUT)$(OBJ_DIR)$Stsp.$O
 
 $(BIN_DIR)/tsp$E: $(OR_TOOLS_LIBS) $(OBJ_DIR)$Stsp.$O
-	$(CCC) $(CFLAGS) $(OBJ_DIR)$Stsp.$O $(OR_TOOLS_LNK) $(LD_FLAGS) $(EXE_OUT)$(BIN_DIR)$Stsp$E
+	$(CXX) $(CXXFLAGS) $(OBJ_DIR)$Stsp.$O $(OR_TOOLS_LNK) $(LDFLAGS) $(EXE_OUT)$(BIN_DIR)$Stsp$E
 
 # Flow and linear assignment cpp
 
 $(OBJ_DIR)$Slinear_assignment_api.$O:$(CPP_EX_DIR)$Slinear_assignment_api.cc
-	$(CCC) $(CFLAGS) -c $(CPP_EX_DIR)$Slinear_assignment_api.cc $(OBJ_OUT)$(OBJ_DIR)$Slinear_assignment_api.$O
+	$(CXX) $(CXXFLAGS) -c $(CPP_EX_DIR)$Slinear_assignment_api.cc $(OBJ_OUT)$(OBJ_DIR)$Slinear_assignment_api.$O
 
 $(BIN_DIR)/linear_assignment_api$E: $(OR_TOOLS_LIBS) $(OBJ_DIR)$Slinear_assignment_api.$O
-	$(CCC) $(CFLAGS) $(OBJ_DIR)$Slinear_assignment_api.$O $(OR_TOOLS_LNK) $(LD_FLAGS) $(EXE_OUT)$(BIN_DIR)$Slinear_assignment_api$E
+	$(CXX) $(CXXFLAGS) $(OBJ_DIR)$Slinear_assignment_api.$O $(OR_TOOLS_LNK) $(LDFLAGS) $(EXE_OUT)$(BIN_DIR)$Slinear_assignment_api$E
 
 $(OBJ_DIR)$Sflow_api.$O:$(CPP_EX_DIR)$Sflow_api.cc
-	$(CCC) $(CFLAGS) -c $(CPP_EX_DIR)$Sflow_api.cc $(OBJ_OUT)$(OBJ_DIR)$Sflow_api.$O
+	$(CXX) $(CXXFLAGS) -c $(CPP_EX_DIR)$Sflow_api.cc $(OBJ_OUT)$(OBJ_DIR)$Sflow_api.$O
 
 $(BIN_DIR)/flow_api$E: $(OR_TOOLS_LIBS) $(OBJ_DIR)$Sflow_api.$O
-	$(CCC) $(CFLAGS) $(OBJ_DIR)$Sflow_api.$O $(OR_TOOLS_LNK) $(LD_FLAGS) $(EXE_OUT)$(BIN_DIR)$Sflow_api$E
+	$(CXX) $(CXXFLAGS) $(OBJ_DIR)$Sflow_api.$O $(OR_TOOLS_LNK) $(LDFLAGS) $(EXE_OUT)$(BIN_DIR)$Sflow_api$E
 
 # Linear Programming Examples
 
 $(OBJ_DIR)$Sstrawberry_fields_with_column_generation.$O: $(CPP_EX_DIR)$Sstrawberry_fields_with_column_generation.cc $(INC_DIR)$Sortools$Slinear_solver$Slinear_solver.h
-	$(CCC) $(CFLAGS) -c $(CPP_EX_DIR)$Sstrawberry_fields_with_column_generation.cc $(OBJ_OUT)$(OBJ_DIR)$Sstrawberry_fields_with_column_generation.$O
+	$(CXX) $(CXXFLAGS) -c $(CPP_EX_DIR)$Sstrawberry_fields_with_column_generation.cc $(OBJ_OUT)$(OBJ_DIR)$Sstrawberry_fields_with_column_generation.$O
 
 $(BIN_DIR)/strawberry_fields_with_column_generation$E: $(OR_TOOLS_LIBS) $(OBJ_DIR)$Sstrawberry_fields_with_column_generation.$O
-	$(CCC) $(CFLAGS) $(OBJ_DIR)$Sstrawberry_fields_with_column_generation.$O $(OR_TOOLS_LNK) $(LD_FLAGS) $(EXE_OUT)$(BIN_DIR)$Sstrawberry_fields_with_column_generation$E
+	$(CXX) $(CXXFLAGS) $(OBJ_DIR)$Sstrawberry_fields_with_column_generation.$O $(OR_TOOLS_LNK) $(LDFLAGS) $(EXE_OUT)$(BIN_DIR)$Sstrawberry_fields_with_column_generation$E
 
 $(OBJ_DIR)$Slinear_programming.$O: $(CPP_EX_DIR)$Slinear_programming.cc $(INC_DIR)$Sortools$Slinear_solver$Slinear_solver.h
-	$(CCC) $(CFLAGS) -c $(CPP_EX_DIR)$Slinear_programming.cc $(OBJ_OUT)$(OBJ_DIR)$Slinear_programming.$O
+	$(CXX) $(CXXFLAGS) -c $(CPP_EX_DIR)$Slinear_programming.cc $(OBJ_OUT)$(OBJ_DIR)$Slinear_programming.$O
 
 $(BIN_DIR)/linear_programming$E: $(OR_TOOLS_LIBS) $(OBJ_DIR)$Slinear_programming.$O
-	$(CCC) $(CFLAGS) $(OBJ_DIR)$Slinear_programming.$O $(OR_TOOLS_LNK) $(LD_FLAGS) $(EXE_OUT)$(BIN_DIR)$Slinear_programming$E
+	$(CXX) $(CXXFLAGS) $(OBJ_DIR)$Slinear_programming.$O $(OR_TOOLS_LNK) $(LDFLAGS) $(EXE_OUT)$(BIN_DIR)$Slinear_programming$E
 
 $(OBJ_DIR)$Slinear_solver_protocol_buffers.$O: $(CPP_EX_DIR)$Slinear_solver_protocol_buffers.cc $(INC_DIR)$Sortools$Slinear_solver$Slinear_solver.h
-	$(CCC) $(CFLAGS) -c $(CPP_EX_DIR)$Slinear_solver_protocol_buffers.cc $(OBJ_OUT)$(OBJ_DIR)$Slinear_solver_protocol_buffers.$O
+	$(CXX) $(CXXFLAGS) -c $(CPP_EX_DIR)$Slinear_solver_protocol_buffers.cc $(OBJ_OUT)$(OBJ_DIR)$Slinear_solver_protocol_buffers.$O
 
 $(BIN_DIR)/linear_solver_protocol_buffers$E: $(OR_TOOLS_LIBS) $(OBJ_DIR)$Slinear_solver_protocol_buffers.$O
-	$(CCC) $(CFLAGS) $(OBJ_DIR)$Slinear_solver_protocol_buffers.$O $(OR_TOOLS_LNK) $(LD_FLAGS) $(EXE_OUT)$(BIN_DIR)$Slinear_solver_protocol_buffers$E
+	$(CXX) $(CXXFLAGS) $(OBJ_DIR)$Slinear_solver_protocol_buffers.$O $(OR_TOOLS_LNK) $(LDFLAGS) $(EXE_OUT)$(BIN_DIR)$Slinear_solver_protocol_buffers$E
 
 $(OBJ_DIR)$Sinteger_programming.$O: $(CPP_EX_DIR)$Sinteger_programming.cc $(INC_DIR)$Sortools$Slinear_solver$Slinear_solver.h
-	$(CCC) $(CFLAGS) -c $(CPP_EX_DIR)$Sinteger_programming.cc $(OBJ_OUT)$(OBJ_DIR)$Sinteger_programming.$O
+	$(CXX) $(CXXFLAGS) -c $(CPP_EX_DIR)$Sinteger_programming.cc $(OBJ_OUT)$(OBJ_DIR)$Sinteger_programming.$O
 
 $(BIN_DIR)/integer_programming$E: $(OR_TOOLS_LIBS) $(OBJ_DIR)$Sinteger_programming.$O
-	$(CCC) $(CFLAGS) $(OBJ_DIR)$Sinteger_programming.$O $(OR_TOOLS_LNK) $(LD_FLAGS) $(EXE_OUT)$(BIN_DIR)$Sinteger_programming$E
+	$(CXX) $(CXXFLAGS) $(OBJ_DIR)$Sinteger_programming.$O $(OR_TOOLS_LNK) $(LDFLAGS) $(EXE_OUT)$(BIN_DIR)$Sinteger_programming$E
 
 # Debug
+.PHONY: detect
+detect: detect_port detect_cc detect_java detect_csharp
 
-printport:
+.PHONY: detect_port
+detect_port:
 	@echo SHELL = $(SHELL)
 	@echo SYSTEM = $(SYSTEM)
 	@echo PORT = $(PORT)
 	@echo OS = $(OS)
-	@echo CCC = $(CCC)
-	@echo CFLAGS = $(CFLAGS)
-	@echo LD_FLAGS = $(LD_FLAGS)
+
+.PHONY: detect_cc
+detect_cc:
+	@echo CXX = $(CXX)
+	@echo CXXFLAGS = $(CXXFLAGS)
+	@echo LDFLAGS = $(LDFLAGS)
+	@echo OR_TOOLS_LNK = $(OR_TOOLS_LNK)
+	@echo CVRPTW_LNK = $(CVRPTW_LNK)
+	@echo DIMACS_LNK = $(DIMACS_LNK)
+	@echo FAP_LNK = $(FAP_LNK)
+
+.PHONY: detect_java
+detect_java:
+	@echo JAVAC_BIN = $(JAVAC_BIN)
+	@echo JAVA_BIN = $(JAVA_BIN)
+	@echo JAVAFLAGS = -Djava.library.path=$(LIB_DIR)
+
+.PHONY: detect_csharp
+detect_csharp:
+	@echo CSC = $(CSC)
+	@echo SIGNING_FLAGS = $(SIGNING_FLAGS)
+	@echo CLR_DLL_NAME = $(CLR_DLL_NAME)
 
 # Include user makefile
-
 -include $(OR_ROOT)Makefile.user
 
 print-%	: ; @echo $* = $($*)
